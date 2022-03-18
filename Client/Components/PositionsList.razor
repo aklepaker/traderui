@@ -1,0 +1,123 @@
+﻿@namespace traderui.Client.Components
+
+<div class="px-4 py-2 px-6">
+    <div class="mb-10">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+            <tr>
+                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Daily</th>
+                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Unrealized</th>
+                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Realized</th>
+            </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200 text-center">
+            <tr>
+                <td>
+                    @(Helper.CurrencyFormat(DailyPnL))
+                </td>
+                <td>
+                    @(Helper.CurrencyFormat(UnrealizedPnL))
+                </td>
+                <td>
+                    @(Helper.CurrencyFormat(RealizedPnL))
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div>
+
+        <table class="min-w-full divide-y divide-gray-200">
+            @*        <thead class="bg-gray-50">
+                <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Symbol</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                <th scope="col" class="relative px-6 py-3">
+                <span class="sr-only">Edit</span>
+                </th>
+                </tr>
+                </thead>
+            *@
+            <thead class="bg-gray-50">
+            <tr class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col">Symbol</th>
+                <th scope="col">Qty</th>
+                <th scope="col">Avg. Cost</th>
+                <th scope="col">Value</th>
+                <th scope="col">Daily</th>
+                <th scope="col">Unrealized</th>
+                <th scope="col">Realized</th>
+
+            </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+
+            @{
+                var rowId = 0;
+                foreach (var position in Positions.Where(p => p.Size > 0))
+                {
+                    var color = rowId % 2 != 0 ? "gray" : "white";
+                    <tr class="bg-@color-50" @key=position.PositionId>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-xs font-medium text-gray-900">@position.Contract.Symbol</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-xs text-gray-900">@position.Size</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div class="text-xs text-gray-500">@(Helper.CurrencyFormat(position.AvgCost))</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div class="text-xs text-gray-500">@(Helper.CurrencyFormat(position.Value))</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div class="text-xs text-gray-500">@(Helper.CurrencyFormat(position.Daily))</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div class="text-xs text-gray-500">@(Helper.CurrencyFormat(position.Unrealized))</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div class="text-xs text-gray-500">@(Helper.CurrencyFormat(position.Realized))</div>
+                        </td>
+                    </tr>
+                    rowId++;
+                }
+            }
+
+            @{
+                foreach (var position in Positions.Where(p => p.Size == 0))
+                {
+                    var color = rowId % 2 != 0 ? "gray" : "white";
+                    <tr class="bg-@color-50" @key=position.PositionId>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-xs font-medium text-gray-900">@position.Contract.Symbol</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-xs text-gray-900">@position.Size</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div class="text-xs text-gray-500">@(Helper.CurrencyFormat(position.AvgCost))</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div class="text-xs text-gray-500">@(Helper.CurrencyFormat(position.Value))</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div class="text-xs text-gray-500">@(Helper.CurrencyFormat(position.Daily))</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div class="text-xs text-gray-500">@(Helper.CurrencyFormat(position.Unrealized))</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div class="text-xs text-gray-500">@(Helper.CurrencyFormat(position.Realized))</div>
+                        </td>
+                    </tr>
+                    rowId++;
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

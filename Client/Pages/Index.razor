@@ -1,0 +1,344 @@
+﻿@inject MessageService _message
+@inject NotificationService _notice
+@inject NavigationManager NavigationManager;
+@inject ILocalStorageService localStorage
+@inject IBrokerService BrokerService;
+
+@page "/"
+@using Blazored.LocalStorage
+@using traderui.Client.Components;
+@using traderui.Client.Services
+@using traderui.Shared
+
+@*
+TODO: This file should be split into smaller components.
+*@
+
+
+<Tabs Type="@TabType.Card">
+
+<TabBarExtraContent>
+    <div class="px-4 py-2">
+        <Button Type="@ButtonType.Primary"
+                OnClick=@(() => ResetForm(true))
+                Block
+                Danger>
+            Clear
+        </Button>
+    </div>
+</TabBarExtraContent>
+<ChildContent>
+<TabPane Key="1" Tab="Trading">
+<div class="bg-white overflow-hidden" @onclick=@(() => OnReceivedFocus())>
+<div class="grid grid-rows-2 grid-flow-col px-4 py-2 h-24">
+    <div class="row-span-2 col-span-2 justify-self-stretch">
+        @if (SymbolLoaded)
+        {
+            <h3 class="text-lg leading-6 font-medium text-gray-900">
+                @ContractDetails.Contract.Symbol (@ContractDetails.Contract.PrimaryExch)
+            </h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">
+                @ContractDetails.LongName - @ContractDetails.Industry
+                <p>
+                    @ContractDetails.Category - @ContractDetails.Subcategory
+                </p>
+            </p>
+        }
+        else
+        {
+            <h3>No symbol</h3>
+        }
+    </div>
+    <div class="row-start-1 col-span-1 justify-self-end">
+        <div class="grid grid-rows-3 grid-flow-col text-xs">
+            @if (SymbolLoaded)
+            {
+                <div class="grid grid-cols-2 grid-flow-row gap-1">
+                    <div>
+                        Updated:
+                    </div>
+                    <div>
+                        <b>@DateTimeUpdated.ToString("HH:mm:ss")</b>
+                    </div>
+                    @if (AdrData.AverageDailyRange > 0)
+                    {
+                        <div>
+                            ADR
+                        </div>
+                        <div class="text-@(AdrData.AverageDailyRange >= 5 ? "green" : "red")-500">
+                            @Helper.Percent(AdrData.AverageDailyRange)%
+                        </div>
+                    }
+
+                    @if (Size > 0)
+                    {
+                        var ratio = (((Price * Size) * (1 + (RiskRatioTarget / 100))) - (Price * Size)) / ((Price * Size) - (StopLossAt * Size));
+                        <div>
+                            RR (@RiskRatioTarget)%
+                        </div>
+                        <div class="text-@(ratio >= 3 ? "green" : "red")-500">
+                            1:@Helper.TwoDecimal(ratio)
+                        </div>
+                    }
+
+                </div>
+            }
+        </div>
+    </div>
+</div>
+<div class="border-t border-gray-200">
+    <dl>
+
+        <div class="bg-gray-50 px-4 py-2 grid grid-cols-2 gap-2 px-6">
+            <dt class="text-sm font-medium text-gray-500">
+                Ticker
+
+            </dt>
+            <dd class="mt-1 text-sm text-gray-900 mt-0">
+                <AntDesign.Input @ref="tickerInput" name="Symbol"
+                                 @bind-value=TempSymbol DefaultValue=@Symbol
+                                 OnPressEnter=@(() => OnSymbolChange()) style="width: 100px" Min="0"/>
+                <Button Type="@ButtonType.Primary" OnClick=@OnResetPriceClick>Reset</Button>
+            </dd>
+        </div>
+        <div class="bg-white-50 px-4 py-2 grid grid-cols-2 gap-2 px-6">
+            <dt class="text-sm font-medium text-gray-500">
+                @(!string.IsNullOrWhiteSpace(PriceType) ? $"{PriceType} price" : "Price")
+            </dt>
+            <dd class="mt-1 text-sm text-gray-900 mt-0">
+                <AntDesign.Input name="Price"
+                                 @ref="priceInput"
+                                 Value=@Price
+                                 DefaultValue=@Price
+                                 OnChange="@((double value) => OnOverridePriceChange(value))"
+                                 OnBlur=@(() => RecalculateNumbers())
+                                 style="width: 100px" Min="0"/>
+            </dd>
+        </div>
+
+        <div class="bg-gray-50 px-4 py-2 grid grid-cols-2 gap-4 px-6">
+            <dt class="text-sm font-medium text-gray-500">
+                Stop-Loss
+                <div class="text-xs">
+                    @StopLossType
+                </div>
+            </dt>
+            <dd class="mt-1 text-sm text-gray-900 mt-0">
+                <AntDesign.InputNumber name="Size" Value=@(StopLossAt) DefaultValue="@StopLossAt" ValueChanged=@((double v) => OnStopLossChange(v)) style="width: 100px" Min="0" Step="0.01"/>
+            </dd>
+        </div>
+
+        <div class="bg-white-50 px-4 py-2 grid grid-cols-2 gap-4 px-6">
+            <dt class="text-sm font-medium text-gray-500">
+                Size
+            </dt>
+            <dd class="mt-1 text-sm text-gray-900 mt-0">
+                <AntDesign.InputNumber name="Size" Value="@Size" DefaultValue="@Size" ValueChanged=@((double v) => OnSizeChange(v)) style="width: 100px" Min="0"/>
+            </dd>
+        </div>
+
+        <div class="bg-gray-50 px-4 py-2 grid grid-cols-2 gap-4 px-6">
+            <dt class="text-sm font-medium text-gray-500">
+                Order type
+            </dt>
+            <dd class="mt-1 text-sm text-gray-900 mt-0">
+                <RadioGroup @bind-Value="@OrderType">
+                    <Radio Value=@OrderType.LMT>Limit</Radio>
+                    <Radio Value=@OrderType.MKT>Market</Radio>
+                </RadioGroup>
+            </dd>
+        </div>
+
+        <div class="bg-white-50 px-4 py-2 grid grid-cols-2 gap-4 px-6">
+            <dt class="text-sm font-medium text-gray-500">
+                Transmitt Order
+            </dt>
+            <dd class="mt-1 text-sm text-gray-900 mt-0">
+                <Switch @bind-Checked=@TransmitOrder>Transmit Order </Switch>
+            </dd>
+        </div>
+
+        <div class="bg-gray-50 px-4 py-2 grid grid-cols-2 gap-4 px-6">
+            <dt class="text-sm font-medium text-gray-500">
+                Place order as a
+            </dt>
+            <dd class="mt-1 text-sm text-gray-900 mt-0">
+                <Switch @bind-Checked=@IsBuyOrder OnChange=@(() => RecalculateNumbers())>
+                    <CheckedChildrenTemplate>
+                        BUY ORDER
+                    </CheckedChildrenTemplate>
+                    <UnCheckedChildrenTemplate>
+                        SELL ORDER
+                    </UnCheckedChildrenTemplate>
+                </Switch>
+            </dd>
+        </div>
+
+        <div class="bg-white-50 px-4 py-2 grid grid-cols-1 gap-4 px-6">
+            <Button Type="@ButtonType.Primary"
+                    Disabled=!AllowPlaceOrder
+                    OnClick=PlaceOrder
+                    Block
+                    Danger=@(IsBuyOrder != true)>
+                @(IsBuyOrder ? "BUY" : "SELL")
+            </Button>
+        </div>
+
+        @if (IsBuyOrder && AdrData.AverageDailyRange > 0 && Math.Round(100 * ((MarketPrice / StopLossAt) - 1), 2) >= Math.Round(AdrData.AverageDailyRange, 2))
+        {
+            <div class="bg-gray-50 px-4 py-2 grid grid-cols-1 gap-4 px-6">
+                <Alert Type=@AlertType.Warning>
+                    <p>
+                        You're violating the ADR rule stating that the difference (@Helper.Percent((100 * ((MarketPrice / StopLossAt) - 1)))%) between the ASK price and your Stop-Loss should not be greater than the ADR
+                        (@Helper.Percent(AdrData.AverageDailyRange)%).
+                    </p>
+                    The Stop-Loss should be no lower than @Helper.CurrencyFormat((MarketPrice / (1 + (AdrData.AverageDailyRange) / 100)) + 0.01)
+                </Alert>
+            </div>
+        }
+
+        @if (AllowPlaceOrder)
+        {
+            <div class="bg-white-50 px-4 py-2 grid grid-cols-1 gap-4 px-6">
+                <Alert Type=@(IsBuyOrder ? AlertType.Info : AlertType.Error)>
+                    You are about to @(IsBuyOrder ? "buy" : "sell") <b>@Size</b> shares of <b>@Symbol?.ToUpper()</b> at <b>@(Helper.CurrencyFormat(Price))</b> for a total of <b>@(Helper.CurrencyFormat(Cost))</b>.<br/>
+                    @if (IsBuyOrder)
+                    {
+                        <span>
+                            Stop-loss at <b>@(Helper.CurrencyFormat(StopLossAt))</b> (@(Helper.Percent((1 - (StopLossAt / Price)) * 100))%) giving a max loss for this trade at <b>@(Helper.CurrencyFormat(MaxLoss))</b><br/>
+                        </span>
+                    }
+
+                    @if (!IsBuyOrder)
+                    {
+                        <br/>
+                        <b>Warning: Ensure you own the stocks, else they will be shorted</b>
+                    }
+                </Alert>
+            </div>
+        }
+
+        @if (Cost > BuyingPower)
+        {
+            <div class="bg-gray-50 px-4 py-2 grid grid-cols-1 gap-4 px-6">
+                <Alert Type=@(AlertType.Error)>
+                    Your cost for this trade exceeds @(Helper.CurrencyFormat(BuyingPower)) with @(Helper.CurrencyFormat(Math.Round(Cost - BuyingPower, 2, MidpointRounding.AwayFromZero)))
+                </Alert>
+            </div>
+        }
+
+        <div class="bg-white-50 px-4 py-2 grid gap-4 px-6">
+            <hr/>
+        </div>
+
+        @* *@
+        @* <div class="bg-white-50 px-4 py-2 grid grid-cols-2 gap-4 px-6"> *@
+        @*     <dt class="text-sm font-medium text-gray-500"> *@
+        @*         Cost *@
+        @*     </dt> *@
+        @*     <dd class="mt-1 text-sm text-gray-900 mt-0"> *@
+        @*         @Helper.CurrencyFormat(Cost) *@
+        @*     </dd> *@
+        @* </div> *@
+        @* *@
+        @* <div class="bg-gray-50 px-4 py-2 grid grid-cols-2 gap-4 px-6"> *@
+        @*     <dt class="text-sm font-medium text-gray-500"> *@
+        @*         Risk *@
+        @*     </dt> *@
+        @*     <dd class="mt-1 text-sm text-gray-900 mt-0"> *@
+        @*         @Helper.CurrencyFormat(MaxLoss) *@
+        @*     </dd> *@
+        @* </div> *@
+        @* *@
+        @* <div class="bg-gray-50 px-4 py-2 grid grid-cols-2 gap-4 px-6"> *@
+        @*     <dt class="text-sm font-medium text-gray-500"> *@
+        @*         Stop-loss *@
+        @*     </dt> *@
+        @*     <dd class="mt-1 text-sm text-gray-900 mt-0"> *@
+        @*         @Helper.CurrencyFormat(StopLossAt) *@
+        @*     </dd> *@
+        @* </div> *@
+
+
+    </dl>
+</div>
+</div>
+</TabPane>
+<TabPane Key="2" Tab="Positions">
+    <PositionsList Positions=@Positions UnrealizedPnL=@UnrealizedPnL RealizedPnL=@RealizedPnL DailyPnL=@DailyPnL />
+</TabPane>
+<TabPane Key="3" Tab="Log">
+    <div>
+        <LogView LogMessages=@LogMessages />
+    </div>
+</TabPane>
+<TabPane Key="4" Tab="Configuration">
+    <div class="bg-white overflow-hidden" @onclick=@(() => OnReceivedFocus())>
+
+        <div class="bg-gray-50 px-4 py-2 grid grid-cols-2 gap-4 px-6">
+            <dt class="text-sm font-medium text-gray-500">
+                Account Size
+                <p class="mt-1 text-xs text-gray-500">
+                    Available: $@BuyingPower
+                </p>
+            </dt>
+            <dd class="mt-1 text-sm text-gray-900 mt-0">
+                <AntDesign.InputNumber name="AccountSize" Value=@AccountSize DefaultValue="@AccountSize" ValueChanged=@((double v) => OnAccountSizeChange(v)) style="width: 100px" Min="0"/>
+            </dd>
+        </div>
+
+        <div class="bg-white-50 px-4 py-2 grid grid-cols-2 gap-4 px-6">
+            <dt class="text-sm font-medium text-gray-500">
+                Position Size %
+            </dt>
+            <dd class="mt-1 text-sm text-gray-900 mt-0">
+                <AntDesign.InputNumber name="PositionSize"
+                                       style="width: 75px"
+                                       Value="@PositionSize"
+                                       DefaultValue="@PositionSize"
+                                       ValueChanged=@((double v) => OnPositionSizeChange(v))
+                                       Max="100"
+                                       Min="0"/>
+            </dd>
+        </div>
+
+        <div class="bg-gray-50 px-4 py-2 grid grid-cols-2 gap-4 px-6">
+            <dt class="text-sm font-medium text-gray-500">
+                Risk %
+            </dt>
+            <dd class="mt-1 text-sm text-gray-900 mt-0">
+                <AntDesign.InputNumber name="Risk" DefaultValue="@Risk" ValueChanged=@((double v) => OnRiskChange(v)) style="width: 75px" Max="100" Min="0"/>
+            </dd>
+        </div>
+
+        <div class="bg-gray-50 px-4 py-2 grid grid-cols-2 gap-4 px-6">
+            <dt class="text-sm font-medium text-gray-500">
+                Max loss $
+            </dt>
+            <dd class="mt-1 text-sm text-gray-900 mt-0">
+                <AntDesign.InputNumber name="MaxLoss" DefaultValue="@MaxLossInDollar" ValueChanged=@((double v) => OnMaxLossChange(v)) style="width: 75px" Max="100" Min="0"/>
+            </dd>
+        </div>
+
+        <div class="bg-gray-50 px-4 py-2 grid grid-cols-2 gap-4 px-6">
+            <dt class="text-sm font-medium text-gray-500">
+                Risk Ratio target %
+            </dt>
+            <dd class="mt-1 text-sm text-gray-900 mt-0">
+                <AntDesign.InputNumber name="MaxLoss" DefaultValue="@RiskRatioTarget" ValueChanged=@((double v) => OnRiskRatioChange(v)) style="width: 75px" Max="100" Min="0"/>
+            </dd>
+        </div>
+
+        <div class="bg-white-50 px-4 py-2 grid grid-cols-2 gap-4 px-6">
+            <dt class="text-sm font-medium text-gray-500">
+                Use @(IsBuyOrder ? "low" : "high") of day as stop loss
+            </dt>
+            <dd class="mt-1 text-sm text-gray-900 mt-0">
+                <Checkbox @bind-Checked=@UseLowOfDayAsStopLoss OnChange=@(() => StateHasChanged())/>
+            </dd>
+        </div>
+
+    </div>
+</TabPane>
+</ChildContent>
+</Tabs>
