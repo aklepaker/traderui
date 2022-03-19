@@ -1,9 +1,9 @@
 ﻿using AntDesign;
 using IBApi;
 using Microsoft.AspNetCore.SignalR.Client;
-using System.Text.Json;
 using traderui.Client.Models;
 using traderui.Shared;
+using traderui.Shared.Events;
 using Action = traderui.Shared.Action;
 
 namespace traderui.Client.Pages
@@ -121,7 +121,10 @@ namespace traderui.Client.Pages
             PriceLoaded = false;
             UseLowOfDayAsStopLoss = true;
 
-            _message.Config(new MessageGlobalConfig {Top = 1, Duration = 1, MaxCount = 3,});
+            _message.Config(new MessageGlobalConfig
+            {
+                Top = 1, Duration = 1, MaxCount = 3,
+            });
 
             TempSymbol = await localStorage.GetItemAsync<string>("symbol");
             if (!string.IsNullOrWhiteSpace(TempSymbol))
@@ -141,21 +144,22 @@ namespace traderui.Client.Pages
                 await BrokerService.GetAccountSummary(false, CancellationToken.None);
             };
 
-            connection.On("contractDetails", async (string contractDetails) =>
+            connection.On(nameof(ContractDetailsMessage), async (ContractDetailsMessage contractDetailsEvent) =>
             {
                 AdrData.Clear();
-                ContractDetails = JsonSerializer.Deserialize<ContractDetails>(contractDetails);
+                ContractDetails = contractDetailsEvent.ContractDetails;
                 SymbolLoaded = true;
-                await localStorage.SetItemAsync<string>("symbol", ContractDetails.Contract.Symbol);
+                await localStorage.SetItemAsync("symbol", ContractDetails.Contract.Symbol);
 
                 await BrokerService.GetTickerPrice(ContractDetails.Contract.Symbol, CancellationToken.None);
-                await BrokerService.GetHistoricalBarData(ContractDetails.Contract.Symbol, AdrBarDataRequest, CancellationToken.None);
+                await BrokerService.GetHistoricalBarData(ContractDetails.Contract.Symbol, AdrBarDataRequest,
+                    CancellationToken.None);
                 StateHasChanged();
             });
 
-            connection.On("errorCode", async (int id, int errorCode, string error) =>
+            connection.On(nameof(ErrorCodeMessage), async (ErrorCodeMessage errorCodeEvent) =>
             {
-                switch (errorCode)
+                switch (errorCodeEvent.ErrorCode)
                 {
                     case 200:
                         ResetForm(false);
@@ -166,12 +170,20 @@ namespace traderui.Client.Pages
                 StateHasChanged();
             });
 
-            connection.On("connectAck", (string error) => { AddLogMessage("Connection established"); });
-
-            connection.On("position", async (string contract, double pos, double avgCost) =>
+            connection.On(nameof(ConnectAckMessage), (ConnectAckMessage connectAckEvent) =>
             {
-                var positionContract = JsonSerializer.Deserialize<Contract>(contract);
-                Position position = new Position {PositionId = positionContract.ConId, Contract = positionContract, Size = pos, AvgCost = avgCost};
+                AddLogMessage(connectAckEvent.Message);
+            });
+
+            connection.On(nameof(PositionMessage), async (PositionMessage positionEvent) =>
+            {
+                Position position = new Position
+                {
+                    PositionId = positionEvent.Contract.ConId,
+                    Contract = positionEvent.Contract,
+                    Size = positionEvent.Pos,
+                    AvgCost = positionEvent.AvgCost,
+                };
 
                 var ix = Positions.FindIndex(c => c.PositionId == position.PositionId);
 
@@ -190,98 +202,105 @@ namespace traderui.Client.Pages
                 }
             });
 
-            connection.On("historicalDataUpdate", (string bar) =>
+            connection.On(nameof(HistoricalDataUpdateMessage), (HistoricalDataUpdateMessage historicalDataUpdateEvent) =>
             {
-                var barData = JsonSerializer.Deserialize<Bar>(bar);
-                HighOfDay = barData.High;
-                LowOfDay = barData.Low;
+                HighOfDay = historicalDataUpdateEvent.Bar.High;
+                LowOfDay = historicalDataUpdateEvent.Bar.Low;
             });
 
-            connection.On("historicalData", (int requestId, string bar) =>
+            connection.On(nameof(HistoricalDataMessage), (HistoricalDataMessage historicalDataEvent) =>
             {
-                var barData = JsonSerializer.Deserialize<Bar>(bar);
-                if (requestId.Equals(AdrBarDataRequest))
+                if (historicalDataEvent.RequestId.Equals(AdrBarDataRequest))
                 {
-                    AdrData.AddHistoricalData(barData);
+                    AdrData.AddHistoricalData(historicalDataEvent.Bar);
                 }
             });
 
-            connection.On("historicalDataEnd", (int reqId, string start, string end) =>
+            connection.On(nameof(HistoricalDataEndMessage), (HistoricalDataEndMessage historicalDataEndEvent) =>
             {
-                if (reqId == AdrBarDataRequest)
+                if (historicalDataEndEvent.RequestId == AdrBarDataRequest)
                 {
                     AdrData.CalculateDailyRange();
                 }
             });
 
-            connection.On("pnl", (double dailyPnL, double unrealizedPnL, double realizedPnL) =>
+            connection.On(nameof(PnlMessage), (PnlMessage pnlEvent) =>
             {
-                DailyPnL = dailyPnL;
-                UnrealizedPnL = unrealizedPnL;
-                RealizedPnL = realizedPnL;
+                DailyPnL = pnlEvent.DailyPnl;
+                RealizedPnL = pnlEvent.RealizedPnl;
+                UnrealizedPnL = pnlEvent.UnrealizedPnl;
                 StateHasChanged();
             });
 
-            connection.On("pnlSingle", (int reqId, decimal pos, double dailyPnL, double unrealizedPnL, double realizedPnL, double value) =>
+            connection.On(nameof(PnlSingleMessage), (PnlSingleMessage pnlSingleEvent) =>
             {
-                var ix = Positions.FindIndex(c => c.PositionId == reqId);
+                var ix = Positions.FindIndex(c => c.PositionId == pnlSingleEvent.RequestId);
                 var position = Positions[ix];
-                position.Daily = dailyPnL;
-                position.Unrealized = unrealizedPnL;
-                position.Realized = realizedPnL;
-                position.Value = value;
+                position.Daily = pnlSingleEvent.DailyPnl;
+                position.Unrealized = pnlSingleEvent.UnrealizedPnl;
+                position.Realized = pnlSingleEvent.RealizedPnl;
+                position.Value = pnlSingleEvent.Value;
                 StateHasChanged();
             });
 
-            connection.On("accountSummary", (string account, string tag, string value, string currency) =>
+            connection.On(nameof(AccountSummaryMessage), (AccountSummaryMessage accountSummaryEvent) =>
             {
-                switch (tag)
+                switch (accountSummaryEvent.Tag)
                 {
                     case "AvailableFunds":
-                        BuyingPower = Convert.ToDouble(value);
+                        BuyingPower = Convert.ToDouble(accountSummaryEvent.Value);
                         break;
 
                     case "NetLiquidation":
-                        AccountSize = Convert.ToDouble(value);
+                        AccountSize = Convert.ToDouble(accountSummaryEvent.Value);
                         break;
                 }
 
-                AccountName = account;
+                AccountName = accountSummaryEvent.Account;
                 BrokerService.GetAccountSummary(true, CancellationToken.None);
                 BrokerService.GetPnL(AccountName, CancellationToken.None);
 
                 StateHasChanged();
             });
 
-            connection.On("openOrder", (Contract contract, Order order, OrderState orderState) => { Console.WriteLine(orderState.Status); });
-
-            connection.On("orderStatus", (string status, double filled, double remaining, double avgFillPrice) => { _message.Info($"{status} - {filled}/{remaining}"); });
-
-            connection.On("tickPrice", (int field, double value) =>
+            connection.On(nameof(OpenOrderMessage), (OpenOrderMessage openOrderEvent) =>
             {
-                // https://interactivebrokers.github.io/tws-api/tick_types.html
-                if (value > 0)
+                Console.WriteLine(openOrderEvent.OrderState.Status);
+            });
+
+            connection.On(nameof(OrderStatusMessage), (OrderStatusMessage orderStatusEvent) =>
+            {
+            });
+
+            connection.On(nameof(TickPriceMessage), (TickPriceMessage tickPriceEvent) =>
+            {
+                /*
+                 See this matrix for details for TickId and TickName
+                 https://interactivebrokers.github.io/tws-api/tick_types.html
+                */
+
+                if (tickPriceEvent.Price > 0)
                 {
-                    switch (field)
+                    switch (tickPriceEvent.Field)
                     {
                         case 1: // Bid
-                            BidPrice = value;
+                            BidPrice = tickPriceEvent.Price;
                             break;
 
                         case 2: // Ask
-                            AskPrice = value;
+                            AskPrice = tickPriceEvent.Price;
                             break;
 
                         case 7: // Low
-                            LowOfDay = value;
+                            LowOfDay = tickPriceEvent.Price;
                             break;
 
                         case 9: // Close Price
-                            ClosePrice = value;
+                            ClosePrice = tickPriceEvent.Price;
                             break;
 
                         case 37: // Market Price
-                            MarketPrice = Math.Round(value, 2, MidpointRounding.AwayFromZero);
+                            MarketPrice = Math.Round(tickPriceEvent.Price, 2, MidpointRounding.AwayFromZero);
                             break;
                     }
 
@@ -291,10 +310,10 @@ namespace traderui.Client.Pages
                 }
             });
 
-            connection.On("tickByTickBidAsk", (double bid, double ask) =>
+            connection.On(nameof(TickByTickBidAskMessage), (TickByTickBidAskMessage tickByTickBidAskEvent) =>
             {
-                AskPrice = ask;
-                BidPrice = bid;
+                AskPrice = tickByTickBidAskEvent.AskPrice;
+                BidPrice = tickByTickBidAskEvent.BidPrice;
                 RecalculateNumbers();
             });
 
@@ -303,8 +322,11 @@ namespace traderui.Client.Pages
                 AddLogMessage(obj);
                 StateHasChanged();
             });
+
+            // Initialize SignalR connection
             await connection.StartAsync();
 
+            // Request basic account details
             await BrokerService.GetAccountSummary(false, CancellationToken.None);
             await BrokerService.GetPositions(CancellationToken.None);
         }
@@ -376,7 +398,8 @@ namespace traderui.Client.Pages
                 }
                 else
                 {
-                    Size = Math.Round(AccountSize * (1 - (100 - PositionSize) / 100) / Price, 0, MidpointRounding.AwayFromZero);
+                    Size = Math.Round(AccountSize * (1 - (100 - PositionSize) / 100) / Price, 0,
+                        MidpointRounding.AwayFromZero);
                 }
             }
         }
@@ -427,7 +450,10 @@ namespace traderui.Client.Pages
         {
             WebOrder webOrder = new WebOrder
             {
-                Contract = new Contract {Currency = "USD", Symbol = Symbol, SecType = "STK", Exchange = "SMART"},
+                Contract = new Contract
+                {
+                    Currency = "USD", Symbol = Symbol, SecType = "STK", Exchange = "SMART"
+                },
                 Action = Action.BUY,
                 OrderType = OrderType,
                 Price = Price,
@@ -445,7 +471,10 @@ namespace traderui.Client.Pages
         {
             WebOrder webOrder = new WebOrder
             {
-                Contract = new Contract {Currency = "USD", Symbol = Symbol, SecType = "STK", Exchange = "SMART"},
+                Contract = new Contract
+                {
+                    Currency = "USD", Symbol = Symbol, SecType = "STK", Exchange = "SMART"
+                },
                 Action = Action.SELL,
                 OrderType = OrderType,
                 Price = Price,

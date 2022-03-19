@@ -2,6 +2,7 @@ using IBApi;
 using Microsoft.AspNetCore.SignalR;
 using System.Text.Json;
 using traderui.Server.Hubs;
+using traderui.Shared.Events;
 
 public class EWrapperImplementation : EWrapper
 {
@@ -34,19 +35,23 @@ public class EWrapperImplementation : EWrapper
 
     public void error(string str)
     {
-        Console.WriteLine(str);
-        Console.WriteLine($"Strng: {str}");
-        _brokerHub.Clients.All.SendAsync("error", str);
+        // _brokerHub.Clients.All.SendAsync("error", str);
     }
 
     public void error(int id, int errorCode, string errorMsg)
     {
         Console.WriteLine($"Message: Request={id} Code={errorCode} Message={errorMsg}");
+        ErrorCodeMessage errorCodeMessage = new ErrorCodeMessage
+        {
+            Id = id,
+            ErrorCode = errorCode,
+            ErrorMessage = errorMsg,
+        };
 
         if (id == -1)
         {
             _brokerHub.Clients.All.SendAsync("log", $"Info: {errorMsg}");
-            _brokerHub.Clients.All.SendAsync("errorCode", id, errorCode, errorMsg);
+            _brokerHub.Clients.All.SendAsync(nameof(ErrorCodeMessage), errorCodeMessage);
             return;
         }
         else
@@ -57,11 +62,11 @@ public class EWrapperImplementation : EWrapper
         switch (errorCode)
         {
             case -1:
-                _brokerHub.Clients.All.SendAsync("errorCode", id, errorCode, errorMsg);
+                _brokerHub.Clients.All.SendAsync(nameof(ErrorCodeMessage), errorCodeMessage);
                 break;
 
             case 200:
-                _brokerHub.Clients.All.SendAsync("errorCode", id, errorCode, errorMsg);
+                _brokerHub.Clients.All.SendAsync(nameof(ErrorCodeMessage), errorCodeMessage);
                 break;
         }
     }
@@ -72,7 +77,13 @@ public class EWrapperImplementation : EWrapper
 
     public void tickPrice(int tickerId, int field, double price, TickAttrib attribs)
     {
-        _brokerHub.Clients.All.SendAsync("tickPrice", field, price);
+        _brokerHub.Clients.All.SendAsync(nameof(TickPriceMessage), new TickPriceMessage
+        {
+            TickerId = tickerId,
+            Field = field,
+            Price = price,
+            TickerAttrib = attribs,
+        });
     }
 
     public void tickSize(int tickerId, int field, int size)
@@ -119,7 +130,14 @@ public class EWrapperImplementation : EWrapper
 
     public void accountSummary(int reqId, string account, string tag, string value, string currency)
     {
-        _brokerHub.Clients.All.SendAsync("accountSummary", account, tag, value, currency);
+
+        _brokerHub.Clients.All.SendAsync(nameof(AccountSummaryMessage), new AccountSummaryMessage
+        {
+            Account = account,
+            Tag = tag,
+            Value = value,
+            Currency = currency,
+        });
     }
 
     public void accountSummaryEnd(int reqId)
@@ -148,14 +166,25 @@ public class EWrapperImplementation : EWrapper
 
     public void orderStatus(int orderId, string status, double filled, double remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, string whyHeld, double mktCapPrice)
     {
-        Console.WriteLine($"Order for {orderId} added. {filled} -  State: {status}");
-        _brokerHub.Clients.All.SendAsync("orderStatus", status, filled, remaining, avgFillPrice);
+        _brokerHub.Clients.All.SendAsync(nameof(OrderStatusMessage), new OrderStatusMessage
+        {
+            OrderId = orderId,
+            Status = status,
+            Filled = filled,
+            Remaining = remaining,
+            AvgFillPrice = avgFillPrice,
+            PermId = permId,
+            ParentId = parentId,
+            LastFillPrice = lastFillPrice,
+            ClientId = clientId,
+            WhyHeld = whyHeld,
+            MarketCapPrice = mktCapPrice,
+        });
     }
 
     public void openOrder(int orderId, Contract contract, Order order, OrderState orderState)
     {
-        _brokerHub.Clients.All.SendAsync("openOrder", contract, order, orderState.Status);
-        Console.WriteLine($"Order for {contract.Symbol} added. State: {orderState.Status}");
+        _brokerHub.Clients.All.SendAsync(nameof(OpenOrderMessage), new OpenOrderMessage {Contract = contract, Order = order, OrderState = orderState,});
     }
 
     public void openOrderEnd()
@@ -164,7 +193,7 @@ public class EWrapperImplementation : EWrapper
 
     public void contractDetails(int reqId, ContractDetails contractDetails)
     {
-        _brokerHub.Clients.All.SendAsync("contractDetails", JsonSerializer.Serialize(contractDetails, new JsonSerializerOptions {WriteIndented = true}));
+        _brokerHub.Clients.All.SendAsync(nameof(ContractDetailsMessage), new ContractDetailsMessage {RequestId = reqId, ContractDetails = contractDetails});
     }
 
     public void contractDetailsEnd(int reqId)
@@ -189,18 +218,17 @@ public class EWrapperImplementation : EWrapper
 
     public void historicalData(int reqId, Bar bar)
     {
-        _brokerHub.Clients.All.SendAsync("historicalData", reqId, JsonSerializer.Serialize(bar, new JsonSerializerOptions {WriteIndented = true}));
+        _brokerHub.Clients.All.SendAsync(nameof(HistoricalDataMessage), new HistoricalDataMessage {RequestId = reqId, Bar = bar,});
     }
 
     public void historicalDataUpdate(int reqId, Bar bar)
     {
-        _brokerHub.Clients.All.SendAsync("historicalDataUpdate", JsonSerializer.Serialize(bar, new JsonSerializerOptions {WriteIndented = true}));
+        _brokerHub.Clients.All.SendAsync(nameof(HistoricalDataUpdateMessage), new HistoricalDataUpdateMessage {RequestId = reqId, Bar = bar,});
     }
 
     public void historicalDataEnd(int reqId, string start, string end)
     {
-        _brokerHub.Clients.All.SendAsync("historicalDataEnd", reqId, start, end);
-        Console.WriteLine("HistoricalDataEnd - " + reqId + " from " + start + " to " + end);
+        _brokerHub.Clients.All.SendAsync(nameof(HistoricalDataEndMessage), new HistoricalDataEndMessage {RequestId = reqId, Start = start, End = end,});
     }
 
     public void marketDataType(int reqId, int marketDataType)
@@ -221,7 +249,13 @@ public class EWrapperImplementation : EWrapper
 
     public void position(string account, Contract contract, double pos, double avgCost)
     {
-        _brokerHub.Clients.All.SendAsync("position", JsonSerializer.Serialize(contract, new JsonSerializerOptions {WriteIndented = true}), pos, avgCost);
+        _brokerHub.Clients.All.SendAsync(nameof(PositionMessage), new PositionMessage
+        {
+            Account = account,
+            Contract = contract,
+            Pos = pos,
+            AvgCost = avgCost,
+        });
     }
 
     public void positionEnd()
@@ -274,7 +308,10 @@ public class EWrapperImplementation : EWrapper
 
     public void connectAck()
     {
-        _brokerHub.Clients.All.SendAsync("connectAck", $"Broker Connected");
+        _brokerHub.Clients.All.SendAsync(nameof(ConnectAckMessage), new ConnectAckMessage
+        {
+            Message = $"Broker Connected",
+        });
     }
 
     public void positionMulti(int requestId, string account, string modelCode, Contract contract, double pos, double avgCost)
@@ -368,28 +405,23 @@ public class EWrapperImplementation : EWrapper
 
     public void pnl(int reqId, double dailyPnL, double unrealizedPnL, double realizedPnL)
     {
-        _brokerHub.Clients.All.SendAsync("pnl", dailyPnL, unrealizedPnL, realizedPnL);
+        _brokerHub.Clients.All.SendAsync(nameof(PnlMessage), new PnlMessage
+        {
+            RequestId = reqId, DailyPnl = dailyPnL, UnrealizedPnl = unrealizedPnL, RealizedPnl = realizedPnL,
+        });
     }
 
     public void pnlSingle(int reqId, int pos, double dailyPnL, double unrealizedPnL, double realizedPnL, double value)
     {
-        if (dailyPnL.Equals(Double.MaxValue))
+        _brokerHub.Clients.All.SendAsync(nameof(PnlSingleMessage), new PnlSingleMessage
         {
-            dailyPnL = 0;
-        }
-
-        if (unrealizedPnL.Equals(Double.MaxValue))
-        {
-            unrealizedPnL = 0;
-        }
-
-        if (realizedPnL.Equals(Double.MaxValue))
-        {
-            realizedPnL = 0;
-        }
-
-        Console.WriteLine($"{reqId}, {pos}, {dailyPnL}, {unrealizedPnL}, {realizedPnL}, {value}");
-        _brokerHub.Clients.All.SendAsync("pnlSingle", reqId, pos, dailyPnL, unrealizedPnL, realizedPnL, value);
+            RequestId = reqId,
+            Pos = pos,
+            DailyPnl = dailyPnL.Equals(Double.MaxValue) ? 0 : dailyPnL,
+            UnrealizedPnl = unrealizedPnL.Equals(Double.MaxValue) ? 0 : unrealizedPnL,
+            RealizedPnl = realizedPnL.Equals(Double.MaxValue) ? 0 : realizedPnL,
+            Value = value,
+        });
     }
 
     public void historicalTicks(int reqId, HistoricalTick[] ticks, bool done)
@@ -410,7 +442,16 @@ public class EWrapperImplementation : EWrapper
 
     public void tickByTickBidAsk(int reqId, long time, double bidPrice, double askPrice, int bidSize, int askSize, TickAttribBidAsk tickAttribBidAsk)
     {
-        _brokerHub.Clients.All.SendAsync("tickByTickBidAsk", bidPrice, askPrice);
+        _brokerHub.Clients.All.SendAsync(nameof(TickByTickBidAskMessage), new TickByTickBidAskMessage
+        {
+            RequestId = reqId,
+            Time = time,
+            BidPrice = bidPrice,
+            AskPrice = askPrice,
+            BidSize = bidSize,
+            AskSize = askSize,
+            TickAttribBidAsk = tickAttribBidAsk,
+        });
     }
 
     public void tickByTickMidPoint(int reqId, long time, double midPoint)
