@@ -8,6 +8,9 @@ This software is provided as is and should be used at your own risk. For one rea
 
 This software could for whatever reason and at any point be archived or discontinued.
 
+## Start
+Start the application by running the `traderui.exe` file from the build, or downloaded release. From your favorite browser open `http://localhost:5000`
+
 ## TODOs
 
 Since this project started out as a proof of concept for testing and getting to know the IBKR API there is a lot shortcuts and not-that-good approaches that should be fixed
