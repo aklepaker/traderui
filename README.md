@@ -34,10 +34,12 @@ Architecture changes
 
 ## Prerequisites
 
-- Due to license restriction the API Source code must be downloaded from https://interactivebrokers.github.io/ prior to compilation.
 - IBKR TWS must be started and configured for allowing ActiveX and Socket Clients.
 
+![APIConfiguration](https://user-images.githubusercontent.com/27571840/159119439-269f6998-8aa4-4a04-9033-272d11cbbdf3.png)
+
 ## Building from scratch.
+Due to license restriction the API Source code must be downloaded from https://interactivebrokers.github.io/ prior to compilation.
 
 Download and install Interactive Brokers TWS API.
 
