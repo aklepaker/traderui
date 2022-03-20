@@ -1,5 +1,6 @@
 using IBApi;
 using Microsoft.AspNetCore.SignalR;
+using Serilog;
 using traderui.Server.Hubs;
 using traderui.Shared;
 using Action = traderui.Shared.Action;
@@ -34,6 +35,11 @@ public class InteractiveBrokers
         _client = _impl.ClientSocket;
         var readerSignal = _impl.Signal;
 
+        if (_client.IsConnected())
+        {
+            return;
+        }
+
         try
         {
             _client.eConnect("127.0.0.1", 7497, 1);
@@ -48,18 +54,21 @@ public class InteractiveBrokers
                     readerSignal.waitForSignal();
                     reader.processMsgs();
                 }
-            }) {IsBackground = true}.Start();
+            })
+            {
+                IsBackground = true
+            }.Start();
 
             while (!_client.IsConnected())
             {
                 _client.eConnect("127.0.0.1", 7497, 1);
                 Thread.Sleep(1000);
-                Console.WriteLine("Waiting for connection");
+                Log.Information("Waiting for connection to TWS");
             }
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.Error(e, "Connection failed");
             throw;
         }
     }
@@ -72,7 +81,7 @@ public class InteractiveBrokers
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.Message);
+            Log.Error(e, "Failed loading TickerPnL for contractId: {ConId}", conId);
         }
     }
 
@@ -86,7 +95,7 @@ public class InteractiveBrokers
         foreach (var requestKey in GetPriceRequestStack.Keys)
         {
             var value = GetPriceRequestStack[requestKey];
-            Console.WriteLine($"Stopped market data for {requestKey}");
+            Log.Information("Stopped market data for {requestKey}", requestKey);
             _client.cancelMktData(value);
             _client.cancelHistoricalData(value);
             GetPriceRequestStack.Remove(requestKey);
@@ -153,7 +162,8 @@ public class InteractiveBrokers
         };
 
         GetPriceRequestStack.Add(name, requestId);
-        Console.WriteLine($"Requested market data for {name}");
+
+        Log.Information("Requested market data for {name}", name);
         _client.reqMktData(requestId, contract, "221", false, false, null);
         _client.reqHistoricalData(requestId, contract, String.Empty, "1 D", "1 day", "TRADES", 1, 1, true, null);
     }
