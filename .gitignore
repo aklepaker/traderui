@@ -116,3 +116,4 @@ Publish/
 ibkr-api/**/*
 !ibkr-api/README.md
 !ibkr-api/ibkr-api.csproj
+**/logs/**

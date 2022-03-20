@@ -1,5 +1,8 @@
 using IBApi;
 using Microsoft.AspNetCore.SignalR;
+using Serilog;
+using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using traderui.Server.Hubs;
 using traderui.Shared.Events;
@@ -12,14 +15,6 @@ public class EWrapperImplementation : EWrapper
     public readonly EReaderSignal Signal;
     public IHubContext<BrokerHub> _brokerHub;
 
-    public int RequestId
-    {
-        get
-        {
-            return Convert.ToInt32(DateTime.Now.ToString("ddHHmmss"));
-        }
-    }
-
     public EWrapperImplementation(IHubContext<BrokerHub> brokerHub)
     {
         _brokerHub = brokerHub;
@@ -29,34 +24,35 @@ public class EWrapperImplementation : EWrapper
 
     public void error(Exception e)
     {
-        Console.WriteLine($"Exception: {e.Message}");
+        Log.Error("Error: {exception}", e);
         _brokerHub.Clients.All.SendAsync("error", e.Message);
     }
 
     public void error(string str)
     {
-        // _brokerHub.Clients.All.SendAsync("error", str);
+        Log.Debug("{message}", str);
     }
 
-    public void error(int id, int errorCode, string errorMsg)
+    public void error(int id, int errorCode, string message)
     {
-        Console.WriteLine($"Message: Request={id} Code={errorCode} Message={errorMsg}");
         ErrorCodeMessage errorCodeMessage = new ErrorCodeMessage
         {
             Id = id,
             ErrorCode = errorCode,
-            ErrorMessage = errorMsg,
+            ErrorMessage = message,
         };
 
         if (id == -1)
         {
-            _brokerHub.Clients.All.SendAsync("log", $"Info: {errorMsg}");
+            Log.Information("{message}", message);
+            _brokerHub.Clients.All.SendAsync("log", $"Info: {message}");
             _brokerHub.Clients.All.SendAsync(nameof(ErrorCodeMessage), errorCodeMessage);
             return;
         }
         else
         {
-            _brokerHub.Clients.All.SendAsync("log", $"Error: {errorCode} {errorMsg}");
+            Log.Warning("{errorCode} - {message}",errorCode, message);
+            _brokerHub.Clients.All.SendAsync("log", $"Error: {errorCode} {message}");
         }
 
         switch (errorCode)
@@ -125,6 +121,7 @@ public class EWrapperImplementation : EWrapper
 
     public void connectionClosed()
     {
+        Log.Information("Connection to TWS closed");
         _brokerHub.Clients.All.SendAsync("connectionClosed");
     }
 
@@ -308,6 +305,7 @@ public class EWrapperImplementation : EWrapper
 
     public void connectAck()
     {
+        Log.Information("Connected to TWS");
         _brokerHub.Clients.All.SendAsync(nameof(ConnectAckMessage), new ConnectAckMessage
         {
             Message = $"Broker Connected",
