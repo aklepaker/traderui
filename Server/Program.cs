@@ -1,3 +1,4 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
 using traderui.Server.Hubs;
@@ -20,15 +21,15 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 builder.Services.Configure<ServerOptions>(builder.Configuration.GetSection(nameof(ServerOptions)));
+builder.Services.AddMediatR(typeof(Program));
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
-builder.Services.AddSingleton<InteractiveBrokers>();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IInteractiveBrokers, InteractiveBrokers>();
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.SuppressModelStateInvalidFilter = true;
 });
-
-builder.Services.AddSignalR();
 
 var app = builder.Build();
 // app.UseSerilogRequestLogging();

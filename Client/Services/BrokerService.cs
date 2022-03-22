@@ -15,7 +15,7 @@ public class BrokerService : IBrokerService
 
     public async Task GetTicker(string name, CancellationToken cancellationToken)
     {
-        await _httpClient.GetFromJsonAsync<Ticker>($"api/broker/ticker/{name}", cancellationToken);
+        await _httpClient.GetAsync($"api/broker/ticker/{name}", cancellationToken);
     }
 
     public async Task GetTickerPrice(string name, CancellationToken cancellationToken)
