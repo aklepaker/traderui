@@ -19,6 +19,7 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(logConfiguration)
     .CreateLogger();
 
+builder.Services.Configure<ServerOptions>(builder.Configuration.GetSection(nameof(ServerOptions)));
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddSingleton<InteractiveBrokers>();

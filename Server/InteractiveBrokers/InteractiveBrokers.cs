@@ -1,5 +1,6 @@
 using IBApi;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
 using Serilog;
 using traderui.Server.Hubs;
 using traderui.Shared;
@@ -16,6 +17,7 @@ public class InteractiveBrokers
     private EWrapperImplementation _impl;
 
     private Random _random = new Random();
+    private readonly ServerOptions _serverOptions;
     public Dictionary<string, int> CurrentRequestStack { get; set; } = new Dictionary<string, int>();
     public Dictionary<string, int> GetPriceRequestStack { get; set; } = new Dictionary<string, int>();
 
@@ -23,8 +25,10 @@ public class InteractiveBrokers
     /// The instance related to the InteractiveBrokers API
     /// </summary>
     /// <param name="brokerHub"></param>
-    public InteractiveBrokers(IHubContext<BrokerHub> brokerHub)
+    /// <param name="serverOptions">Server configuration</param>
+    public InteractiveBrokers(IHubContext<BrokerHub> brokerHub, IOptions<ServerOptions> serverOptions)
     {
+        _serverOptions = serverOptions.Value;
         _brokerHub = brokerHub;
         Connect();
     }
@@ -42,7 +46,12 @@ public class InteractiveBrokers
 
         try
         {
-            _client.eConnect("127.0.0.1", 7497, 1);
+            while (!_client.IsConnected())
+            {
+                _client.eConnect(_serverOptions.Server, _serverOptions.Port, _serverOptions.ClientId);
+                Thread.Sleep(1000);
+                Log.Information("Waiting for connection to TWS");
+            }
 
             var reader = new EReader(_client, readerSignal);
             reader.Start();
@@ -58,13 +67,6 @@ public class InteractiveBrokers
             {
                 IsBackground = true
             }.Start();
-
-            while (!_client.IsConnected())
-            {
-                _client.eConnect("127.0.0.1", 7497, 1);
-                Thread.Sleep(1000);
-                Log.Information("Waiting for connection to TWS");
-            }
         }
         catch (Exception e)
         {
