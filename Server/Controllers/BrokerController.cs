@@ -2,6 +2,8 @@ using AutoMapper;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
+using System.Diagnostics;
+using System.Reflection;
 using traderui.Server.Commands;
 using traderui.Server.IBKR;
 using traderui.Shared.Requests;
@@ -26,6 +28,20 @@ namespace traderui.Server.Controllers
             _broker = broker;
             _mediator = mediator;
             _mapper = mapper;
+        }
+
+        [HttpGet("version")]
+        public IActionResult Get()
+        {
+            try
+            {
+                return Ok(FileVersionInfo.GetVersionInfo(Process.GetCurrentProcess().MainModule.FileName+"2").ProductVersion);
+            }
+            catch (Exception)
+            {
+                Log.Warning("Could not retreive {Type} of {File}","ProductVersion", Process.GetCurrentProcess().MainModule.FileName);
+                return Ok("");
+            }
         }
 
         [HttpGet("ticker/{symbol}")]

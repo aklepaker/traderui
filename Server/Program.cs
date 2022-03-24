@@ -1,6 +1,12 @@
 using MediatR;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Serilog;
+using System;
+using System.Diagnostics;
 using traderui.Server.Hubs;
 using traderui.Server.IBKR;
 
@@ -19,6 +25,9 @@ builder.Host.UseSerilog((context, config) =>
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(logConfiguration)
     .CreateLogger();
+
+var version = FileVersionInfo.GetVersionInfo(Process.GetCurrentProcess().MainModule.FileName);
+Log.Information($"{version.ProductName} v{version.ProductVersion}");
 
 builder.Services.Configure<ServerOptions>(builder.Configuration.GetSection(nameof(ServerOptions)));
 builder.Services.AddMediatR(typeof(Program));
