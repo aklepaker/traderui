@@ -5,9 +5,9 @@ namespace traderui.Server.Hubs;
 
 public class BrokerHub : Hub
 {
-    private InteractiveBrokers _broker;
+    private IInteractiveBrokers _broker;
 
-    public BrokerHub(InteractiveBrokers broker)
+    public BrokerHub(IInteractiveBrokers broker)
     {
         _broker = broker;
     }
