@@ -353,7 +353,6 @@ namespace traderui.Client.Pages
 
         public void RecalculateNumbers()
         {
-            // RecalculatePositionSize();
             RecalculateCost();
             StateHasChanged();
         }
@@ -459,10 +458,6 @@ namespace traderui.Client.Pages
             var orderRequest = new PlaceOrderRequest
             {
                 ContractDetails = ContractDetails,
-                // Contract = new Contract
-                // {
-                //     Currency = "USD", Symbol = Symbol, SecType = "STK", Exchange = "SMART"
-                // },
                 Action = MarketAction.BUY,
                 OrderType = OrderType,
                 Price = Price,
@@ -543,7 +538,6 @@ namespace traderui.Client.Pages
                 NavigationManager.NavigateTo("/", true);
             }
 
-            //OnPriceChange();
             RecalculatePositionSize();
             RecalculateNumbers();
             StateHasChanged();
