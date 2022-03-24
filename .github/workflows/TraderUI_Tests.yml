@@ -1,0 +1,37 @@
+name: TraderUI Tests
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: pr-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  Tests:
+    name: TraderUI Tests
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Download IBKR API
+        run: |
+          wget https://interactivebrokers.github.io/downloads/TWS%20API%20Install%20976.01.msi -OutFile $env:TEMP"\TWS_API.msi"
+          Start-Process msiexec.exe -Wait -ArgumentList "/i $env:TEMP\TWS_API.msi /quiet /qn TARGETDIR=$env:TEMP EULA=1"
+          Copy-Item -Recurse -Path $env:TEMP"\TWS API\source\CSharpClient\client" .\ibkr-api\
+          Start-Process msiexec.exe -Wait -ArgumentList "/x $env:TEMP\TWS_API.msi /quiet /qn"
+          Remove-Item -Path $env:TEMP"\TWS_API.msi"
+
+      - name: Build
+        run: |
+          dotnet build traderui.sln
+
+      - name: Tests
+        run: |
+          dotnet test traderui.sln
