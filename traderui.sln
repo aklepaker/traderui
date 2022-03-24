@@ -18,6 +18,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionFiles", "SolutionFi
 		.gitignore = .gitignore
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GitHub", "GitHub", "{3BFD34F4-35E2-4C48-A03D-BE6F3DCC3A62}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\TraderUI_Tests.yml = .github\workflows\TraderUI_Tests.yml
+		.github\workflows\TraderUI_Build.yml = .github\workflows\TraderUI_Build.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -82,5 +88,8 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {40785A16-B00E-4E78-BDF9-E40E606D722C}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{3BFD34F4-35E2-4C48-A03D-BE6F3DCC3A62} = {2D8F1C4F-83D0-42DA-B1B9-D3899D328FB8}
 	EndGlobalSection
 EndGlobal
