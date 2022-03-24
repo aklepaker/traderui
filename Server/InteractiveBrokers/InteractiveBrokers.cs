@@ -2,9 +2,9 @@ using IBApi;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using Serilog;
+using System.Globalization;
 using traderui.Server.Hubs;
 using traderui.Shared;
-using Action = traderui.Shared.Action;
 
 namespace traderui.Server.IBKR
 {
@@ -218,8 +218,11 @@ namespace traderui.Server.IBKR
                 // }
             };
 
-            _client.placeOrder(order.OrderId, webOrder.Contract, order);
-            if (webOrder.Action == Action.BUY)
+            _client.placeOrder(order.OrderId, webOrder.ContractDetails.Contract, order);
+
+            var numberOfDecimals = webOrder.StopLossAt is > 0 and < 1 ? 4 : 2;
+
+            if (webOrder.Action == MarketAction.BUY)
             {
                 Order stopLoss = new Order
                 {
@@ -228,11 +231,11 @@ namespace traderui.Server.IBKR
                     OrderId = _impl.NextOrderId + 1,
                     OrderType = "STP",
                     TotalQuantity = webOrder.Qty,
-                    AuxPrice = webOrder.StopLossAt,
+                    AuxPrice = Math.Round(webOrder.StopLossAt,numberOfDecimals,MidpointRounding.ToZero),
                     Transmit = webOrder.Transmit,
                     Tif = "GTC" // Good til canceled
                 };
-                _client.placeOrder(stopLoss.OrderId, webOrder.Contract, stopLoss);
+                _client.placeOrder(stopLoss.OrderId, webOrder.ContractDetails.Contract, stopLoss);
             }
 
             _client.reqIds(-1); // Need to to this so we're up on the correct number on serverside.

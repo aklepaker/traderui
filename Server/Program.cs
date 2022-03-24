@@ -22,6 +22,7 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Services.Configure<ServerOptions>(builder.Configuration.GetSection(nameof(ServerOptions)));
 builder.Services.AddMediatR(typeof(Program));
+builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddSignalR();

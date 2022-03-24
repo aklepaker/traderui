@@ -1,8 +1,10 @@
+using AutoMapper;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
 using traderui.Server.Commands;
 using traderui.Server.IBKR;
-using traderui.Shared;
+using traderui.Shared.Requests;
 
 namespace traderui.Server.Controllers
 {
@@ -13,12 +15,17 @@ namespace traderui.Server.Controllers
         private readonly ILogger<BrokerController> _logger;
         private readonly IInteractiveBrokers _broker;
         private readonly IMediator _mediator;
+        private readonly IMapper _mapper;
 
-        public BrokerController(ILogger<BrokerController> logger, IInteractiveBrokers broker, IMediator mediator)
+        public BrokerController(ILogger<BrokerController> logger,
+            IInteractiveBrokers broker,
+            IMediator mediator,
+            IMapper mapper)
         {
             _logger = logger;
             _broker = broker;
             _mediator = mediator;
+            _mapper = mapper;
         }
 
         [HttpGet("ticker/{symbol}")]
@@ -63,9 +70,18 @@ namespace traderui.Server.Controllers
         }
 
         [HttpPost("ticker/{name}/buy")]
-        public IActionResult PlaceOrder(string name, [FromBody] WebOrder order)
+        public IActionResult PlaceOrder(string name, [FromBody] PlaceOrderRequest placeOrderRequest)
         {
-            _broker.PlaceOrder(order);
+            try
+            {
+                var placeOrderCommand = _mapper.Map<PlaceOrderRequest, PlaceOrderCommand>(placeOrderRequest);
+                _mediator.Send(placeOrderCommand);
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, e.Message);
+            }
+
             return Ok();
         }
 
@@ -101,9 +117,7 @@ namespace traderui.Server.Controllers
         {
             _mediator.Send(new GetPnLCommand
             {
-                Account = account,
-                ContractId = conId,
-                Active = active,
+                Account = account, ContractId = conId, Active = active,
             });
             return Ok();
         }

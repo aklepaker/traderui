@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 using traderui.Client.Models;
 using traderui.Shared;
 using traderui.Shared.Events;
-using Action = traderui.Shared.Action;
+using traderui.Shared.Requests;
 
 namespace traderui.Client.Pages
 {
@@ -413,7 +413,15 @@ namespace traderui.Client.Pages
 
         public void OnStopLossChange(double v)
         {
-            OverrideStopLoss = v;
+            if (v is > 0 and < 1)
+            {
+                OverrideStopLoss = Math.Round(v, 4);
+            }
+            else
+            {
+                OverrideStopLoss = Math.Round(v, 2);
+            }
+
             RecalculateNumbers();
         }
 
@@ -448,13 +456,14 @@ namespace traderui.Client.Pages
 
         public void PlaceBuyOrder()
         {
-            WebOrder webOrder = new WebOrder
+            var orderRequest = new PlaceOrderRequest
             {
-                Contract = new Contract
-                {
-                    Currency = "USD", Symbol = Symbol, SecType = "STK", Exchange = "SMART"
-                },
-                Action = Action.BUY,
+                ContractDetails = ContractDetails,
+                // Contract = new Contract
+                // {
+                //     Currency = "USD", Symbol = Symbol, SecType = "STK", Exchange = "SMART"
+                // },
+                Action = MarketAction.BUY,
                 OrderType = OrderType,
                 Price = Price,
                 Qty = Size,
@@ -464,18 +473,15 @@ namespace traderui.Client.Pages
                 StopLossAt = StopLossAt,
             };
 
-            BrokerService.BuyOrder(Symbol, webOrder, CancellationToken.None);
+            BrokerService.BuyOrder(Symbol, orderRequest, CancellationToken.None);
         }
 
         public void PlaceSellOrder()
         {
-            WebOrder webOrder = new WebOrder
+            var orderRequest = new PlaceOrderRequest
             {
-                Contract = new Contract
-                {
-                    Currency = "USD", Symbol = Symbol, SecType = "STK", Exchange = "SMART"
-                },
-                Action = Action.SELL,
+                ContractDetails = ContractDetails,
+                Action = MarketAction.SELL,
                 OrderType = OrderType,
                 Price = Price,
                 Qty = Size,
@@ -485,7 +491,7 @@ namespace traderui.Client.Pages
                 StopLossAt = StopLossAt,
             };
 
-            BrokerService.BuyOrder(Symbol, webOrder, CancellationToken.None);
+            BrokerService.BuyOrder(Symbol, orderRequest, CancellationToken.None);
         }
 
         private void CalculateAllowPlaceOrder()

@@ -124,7 +124,7 @@ TODO: This file should be split into smaller components.
                 </div>
             </dt>
             <dd class="mt-1 text-sm text-gray-900 mt-0">
-                <AntDesign.InputNumber name="Size" Value=@(StopLossAt) DefaultValue="@StopLossAt" ValueChanged=@((double v) => OnStopLossChange(v)) style="width: 100px" Min="0" Step="0.01"/>
+                <AntDesign.Input name="Size" Value=@(StopLossAt) DefaultValue="@StopLossAt" OnChange=@((double v) => OnStopLossChange(v)) style="width: 100px" />
             </dd>
         </div>
 

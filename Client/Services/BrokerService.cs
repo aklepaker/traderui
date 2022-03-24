@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
 using traderui.Shared;
-using traderui.Shared.Models;
+using traderui.Shared.Requests;
 
 namespace traderui.Client.Services;
 
@@ -20,7 +20,7 @@ public class BrokerService : IBrokerService
 
     public async Task GetTickerPrice(string name, CancellationToken cancellationToken)
     {
-        await _httpClient.GetFromJsonAsync<Ticker>($"api/broker/ticker/{name}/price", cancellationToken);
+        await _httpClient.GetAsync($"api/broker/ticker/{name}/price", cancellationToken);
     }
 
     public async Task GetHistoricalBarData(string name, int requestId, CancellationToken cancellationToken)
@@ -28,9 +28,9 @@ public class BrokerService : IBrokerService
         await _httpClient.GetAsync($"api/broker/ticker/{name}/historicbardata/{requestId}", cancellationToken);
     }
 
-    public async Task BuyOrder(string name, WebOrder webOrder, CancellationToken cancellationToken)
+    public async Task BuyOrder(string name, PlaceOrderRequest orderRequest, CancellationToken cancellationToken)
     {
-        await _httpClient.PostAsJsonAsync($"api/broker/ticker/{name}/buy", webOrder, cancellationToken);
+        await _httpClient.PostAsJsonAsync($"api/broker/ticker/{name}/buy", orderRequest, cancellationToken);
     }
 
     public async Task GetAccountSummary(bool stopRequest, CancellationToken cancellationToken)
