@@ -26,9 +26,6 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(logConfiguration)
     .CreateLogger();
 
-var version = FileVersionInfo.GetVersionInfo(Process.GetCurrentProcess().MainModule.FileName);
-Log.Information($"{version.ProductName} v{version.ProductVersion}");
-
 builder.Services.Configure<ServerOptions>(builder.Configuration.GetSection(nameof(ServerOptions)));
 builder.Services.AddMediatR(typeof(Program));
 builder.Services.AddAutoMapper(typeof(Program));
@@ -66,4 +63,8 @@ app.MapRazorPages();
 app.MapControllers();
 app.MapHub<BrokerHub>("/hub/broker");
 app.MapFallbackToFile("index.html");
+
+var version = FileVersionInfo.GetVersionInfo(Process.GetCurrentProcess().MainModule.FileName);
+Log.Information($"{version.ProductName} v{version.ProductVersion}");
+
 app.Run();

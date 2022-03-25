@@ -24,8 +24,8 @@ public class EWrapperImplementation : EWrapper
 
     public void error(Exception e)
     {
-        Log.Error("Error: {exception}", e);
         _brokerHub.Clients.All.SendAsync("error", e.Message);
+        throw new Exception(e.Message, innerException: e);
     }
 
     public void error(string str)
