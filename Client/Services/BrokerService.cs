@@ -13,6 +13,12 @@ public class BrokerService : IBrokerService
         _httpClient = httpClient;
     }
 
+    public async Task<string> GetVersion(CancellationToken cancellationToken)
+    {
+        var result = await _httpClient.GetAsync($"api/broker/version", cancellationToken);
+        return await result.Content.ReadAsStringAsync();
+    }
+
     public async Task GetTicker(string name, CancellationToken cancellationToken)
     {
         await _httpClient.GetAsync($"api/broker/ticker/{name}", cancellationToken);

@@ -1,4 +1,4 @@
-name: TraderUI Tests
+name: Validation
 on:
   workflow_dispatch:
   pull_request:
@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   Tests:
-    name: TraderUI Tests
+    name: Tests
     runs-on: windows-latest
     steps:
       - name: Checkout

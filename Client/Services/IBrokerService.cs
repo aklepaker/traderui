@@ -1,4 +1,3 @@
-using traderui.Shared;
 using traderui.Shared.Requests;
 
 namespace traderui.Client.Services;
@@ -14,4 +13,5 @@ public interface IBrokerService
     Task GetTickerPnL(string account, int conId, bool active, CancellationToken cancellation);
     Task CancelSubscriptions(CancellationToken cancellation);
     Task GetHistoricalBarData(string name, int requestId, CancellationToken cancellationToken);
+    Task<string> GetVersion(CancellationToken cancellationToken);
 }

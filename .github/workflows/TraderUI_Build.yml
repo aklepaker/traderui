@@ -1,0 +1,62 @@
+name: Build
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  Tests:
+    name: Release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - uses: benjlevesque/short-sha@v1.2
+        id: short-sha
+        with:
+          length: 7
+
+      - name: run minver
+        id: minver
+        uses: Stelzi79/action-minver@main-Stelzi79
+        with:
+          auto-increment: patch
+          build-metadata: ${{ steps.short-sha.outputs.sha }}
+          default-pre-release-phase: alpha
+          minimum-major-minor: ${{ env.MinVerMinimumMajorMinor }}
+          tag-prefix: v
+          verbosity: info
+          minver-version: 2.5.0
+
+      - name: Set version outputs
+        id: version
+        run: |
+          echo "::set-output name=version::${{ steps.minver.outputs.version }}"
+          echo "::set-output name=semver::${{ steps.minver.outputs.major }}.${{ steps.minver.outputs.minor }}.${{ steps.minver.outputs.patch }}"
+          echo "::set-output name=filever::${{ steps.minver.outputs.major }}.${{ steps.minver.outputs.minor }}.${{ steps.minver.outputs.patch }}.${{ github.run_number }}"
+
+      - name: Download IBKR API
+        run: |
+          Invoke-WebRequest -Uri https://interactivebrokers.github.io/downloads/TWS%20API%20Install%20976.01.msi -OutFile $env:TEMP"\TWS_API.msi"
+          Start-Process msiexec.exe -Wait -ArgumentList "/i $env:TEMP\TWS_API.msi /quiet /qn TARGETDIR=$env:TEMP EULA=1"
+          Copy-Item -Recurse -Path $env:TEMP"\TWS API\source\CSharpClient\client\*" .\ibkr-api\
+          Start-Process msiexec.exe -Wait -ArgumentList "/x $env:TEMP\TWS_API.msi /quiet /qn"
+          Remove-Item -Path $env:TEMP"\TWS_API.msi"
+
+      - name: Publish
+        run: |
+          dotnet publish .\Server\traderui.Server.csproj -c Release -o .\Publish
+
+      - name: Archive Artifact
+        run: |
+          New-Item -Type Directory -Path Artifact
+          Compress-Archive -CompressionLevel Optimal -Path Publish\* -DestinationPath .\Artifact\traderui_${{ steps.version.outputs.filever }}.zip
+
+      - name: Upload Binaries
+        uses: actions/upload-artifact@v2
+        with:
+          name: traderui_${{ steps.version.outputs.filever }}.zip
+          path: .\Artifact\traderui_${{ steps.version.outputs.filever }}.zip
+          retention-days: 30

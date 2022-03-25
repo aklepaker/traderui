@@ -1,6 +1,9 @@
 ﻿using AntDesign;
 using IBApi;
 using Microsoft.AspNetCore.SignalR.Client;
+using System;
+using System.Collections.Generic;
+using System.Threading;
 using traderui.Client.Models;
 using traderui.Shared;
 using traderui.Shared.Events;
@@ -11,6 +14,7 @@ namespace traderui.Client.Pages
     public partial class Index
     {
         // TODO: Split these properties into a domain object.
+        public string ApplicationVersion { get; set; }
 
         public Random _randomNumberGenerator = new Random();
         public int AdrBarDataRequest { get; set; }
@@ -120,6 +124,7 @@ namespace traderui.Client.Pages
             PositionSize = await localStorage.GetItemAsync<double>("positionSize"); // In percentage
             PriceLoaded = false;
             UseLowOfDayAsStopLoss = true;
+            ApplicationVersion = await BrokerService.GetVersion(CancellationToken.None);
 
             _message.Config(new MessageGlobalConfig
             {
@@ -179,10 +184,7 @@ namespace traderui.Client.Pages
             {
                 Position position = new Position
                 {
-                    PositionId = positionEvent.Contract.ConId,
-                    Contract = positionEvent.Contract,
-                    Size = positionEvent.Pos,
-                    AvgCost = positionEvent.AvgCost,
+                    PositionId = positionEvent.Contract.ConId, Contract = positionEvent.Contract, Size = positionEvent.Pos, AvgCost = positionEvent.AvgCost,
                 };
 
                 var ix = Positions.FindIndex(c => c.PositionId == position.PositionId);
