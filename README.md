@@ -19,17 +19,14 @@ before this source code stable and maintainable.
 Functional changes:
 
 - [ ] UI should allow for multiple ticker tabs
-- [ ] Configuration for hostnames and ports for TWS endpoint
 
 Architecture changes
 
 - [ ] All API requests should have a requestId when initialized from front-end.
 - [ ] Split up into components and SSOT (Flux/Redux pattern)
-- [ ] Use DTOs and objects over the wire
 
 ## Known bugs
 
-- [ ] In some cases StopLoss is not attached - when this happens the main order will not be submitted to the exchange.
 - [ ] PnL for positions does not update outside of RTH
 
 ## Prerequisites
