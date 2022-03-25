@@ -42,7 +42,7 @@ public class EWrapperImplementation : EWrapper
             ErrorMessage = message,
         };
 
-        if (id == -1)
+        if (id == -1 && errorCode <= 0)
         {
             Log.Information("{message}", message);
             _brokerHub.Clients.All.SendAsync("log", $"Info: {message}");
@@ -52,7 +52,7 @@ public class EWrapperImplementation : EWrapper
         else
         {
             Log.Warning("{errorCode} - {message}",errorCode, message);
-            _brokerHub.Clients.All.SendAsync("log", $"Error: {errorCode} {message}");
+            _brokerHub.Clients.All.SendAsync("log", $"{errorCode} {message}");
         }
 
         switch (errorCode)
@@ -122,7 +122,10 @@ public class EWrapperImplementation : EWrapper
     public void connectionClosed()
     {
         Log.Information("Connection to TWS closed");
-        _brokerHub.Clients.All.SendAsync("connectionClosed");
+        _brokerHub.Clients.All.SendAsync(nameof(TWSDisconnectedMessage), new TWSDisconnectedMessage
+        {
+            Message = $"Broker Connected",
+        });
     }
 
     public void accountSummary(int reqId, string account, string tag, string value, string currency)
@@ -305,7 +308,6 @@ public class EWrapperImplementation : EWrapper
 
     public void connectAck()
     {
-        Log.Information("Connected to TWS");
         _brokerHub.Clients.All.SendAsync(nameof(ConnectAckMessage), new ConnectAckMessage
         {
             Message = $"Broker Connected",
