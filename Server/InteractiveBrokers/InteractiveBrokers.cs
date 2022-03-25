@@ -144,8 +144,9 @@ namespace traderui.Server.IBKR
                 Log.Information("Stopped market data for {requestKey}", requestKey);
                 _client.cancelMktData(value);
                 _client.cancelHistoricalData(value);
-                GetPriceRequestStack.Remove(requestKey);
             }
+
+            GetPriceRequestStack.Clear();
         }
 
         public void GetHistoricPrice(string name)

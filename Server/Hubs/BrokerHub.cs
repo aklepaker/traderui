@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using traderui.Server.IBKR;
 using traderui.Shared.Events;
@@ -23,7 +24,10 @@ public class BrokerHub : Hub
         }
         else
         {
-            Clients.All.SendAsync(nameof(TWSConnectedMessage), new TWSConnectedMessage());
+            Clients.All.SendAsync(nameof(TWSConnectedMessage), new TWSConnectedMessage
+            {
+                Version = FileVersionInfo.GetVersionInfo(Process.GetCurrentProcess().MainModule.FileName).ProductVersion
+            });
         }
 
         return base.OnConnectedAsync();
