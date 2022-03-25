@@ -15,5 +15,6 @@ namespace traderui.Server.IBKR
         void PlaceOrder(WebOrder webOrder);
         void GetPositions();
         void GetAccountSummary(bool stopRequest);
+        bool IsConnected();
     }
 }

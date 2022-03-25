@@ -109,6 +109,8 @@ namespace traderui.Client.Pages
 
         public string LogMessages { get; set; }
 
+        public bool IsConnectedToTws { get; set; } = true;
+
         protected override async void OnInitialized()
         {
             AdrBarDataRequest = _randomNumberGenerator.Next();
@@ -124,7 +126,6 @@ namespace traderui.Client.Pages
             PositionSize = await localStorage.GetItemAsync<double>("positionSize"); // In percentage
             PriceLoaded = false;
             UseLowOfDayAsStopLoss = true;
-            ApplicationVersion = await BrokerService.GetVersion(CancellationToken.None);
 
             _message.Config(new MessageGlobalConfig
             {
@@ -142,12 +143,42 @@ namespace traderui.Client.Pages
                 .WithAutomaticReconnect()
                 .Build();
 
+            connection.Closed += (e) =>
+            {
+                IsConnectedToTws = false;
+                StateHasChanged();
+                return null;
+            };
+
+            connection.Reconnecting += (e) =>
+            {
+                IsConnectedToTws = false;
+                StateHasChanged();
+                return null;
+            };
+
             connection.Reconnected += async (connectionId) =>
             {
                 await BrokerService.CancelSubscriptions(CancellationToken.None);
                 await BrokerService.GetPositions(CancellationToken.None);
                 await BrokerService.GetAccountSummary(false, CancellationToken.None);
+                IsConnectedToTws = true;
+                StateHasChanged();
             };
+
+            connection.On(nameof(TWSDisconnectedMessage), (TWSDisconnectedMessage message) =>
+            {
+                IsConnectedToTws = false;
+                StateHasChanged();
+            });
+
+            connection.On(nameof(TWSConnectedMessage), (TWSConnectedMessage message) =>
+            {
+                IsConnectedToTws = true;
+                ApplicationVersion = message.Version;
+                OnSymbolChange();
+                StateHasChanged();
+            });
 
             connection.On(nameof(ContractDetailsMessage), async (ContractDetailsMessage contractDetailsEvent) =>
             {

@@ -5,8 +5,10 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using traderui.Server.Hubs;
 using traderui.Shared;
+using traderui.Shared.Events;
 
 namespace traderui.Server.IBKR
 {
@@ -23,6 +25,8 @@ namespace traderui.Server.IBKR
         private Dictionary<string, int> CurrentRequestStack { get; set; } = new Dictionary<string, int>();
         private Dictionary<string, int> GetPriceRequestStack { get; set; } = new Dictionary<string, int>();
 
+        private bool ConnectionInProgress { get; set; } = false;
+
         /// <summary>
         /// The instance related to the InteractiveBrokers API
         /// </summary>
@@ -32,55 +36,86 @@ namespace traderui.Server.IBKR
         {
             _serverOptions = serverOptions.Value;
             _brokerHub = brokerHub;
+            _impl = new EWrapperImplementation(_brokerHub);
+            _client = _impl.ClientSocket;
             Connect();
+        }
+
+        public bool IsConnected()
+        {
+            if (_client is null)
+            {
+                return false;
+            }
+
+            return _client.IsConnected();
         }
 
         private void Connect()
         {
-            _impl = new EWrapperImplementation(_brokerHub);
-            _client = _impl.ClientSocket;
             var readerSignal = _impl.Signal;
-
             if (_client.IsConnected())
             {
                 return;
             }
 
-            try
+            // Since this class is a single instance, and we don't want to
+            // spawn multiple connection attempts we keep track so there is
+            // only one attempt at a time.
+            if (!ConnectionInProgress)
             {
-                while (!_client.IsConnected())
+                ConnectionInProgress = true;
+
+                // The connection attempt blocks the current process
+                // so we need to run it in a separate thread.
+                Task.Run(() =>
                 {
                     try
                     {
-                        _client.eConnect(_serverOptions.Server, _serverOptions.Port, _serverOptions.ClientId);
-                        Thread.Sleep(1000);
-                        Log.Information("Waiting for connection to TWS");
+                        while (!_client.IsConnected())
+                        {
+                            try
+                            {
+                                _client.eConnect(_serverOptions.Server, _serverOptions.Port, _serverOptions.ClientId);
+                                _brokerHub.Clients.All.SendAsync(nameof(TWSConnectedMessage), new TWSConnectedMessage());
+                            }
+                            catch (Exception e)
+                            {
+                                _brokerHub.Clients.All.SendAsync(nameof(TWSDisconnectedMessage), new TWSDisconnectedMessage
+                                {
+                                    Message = "Not connceted to TWS backend.",
+                                });
+
+                                Log.Error("Connection to TWS backend failed. Verify the TWS is running. Error: {Message}", e.Message);
+                            }
+
+                            Thread.Sleep(1000);
+                        }
+
+                        ConnectionInProgress = false;
+                        var reader = new EReader(_client, readerSignal);
+                        reader.Start();
+
+                        new Thread(() =>
+                        {
+                            while (_client.IsConnected())
+                            {
+                                readerSignal.waitForSignal();
+                                reader.processMsgs();
+                            }
+                        })
+                        {
+                            IsBackground = true
+                        }.Start();
                     }
                     catch (Exception e)
                     {
-                        Log.Error("Connection to TWS backend failed. Verify the TWS is running. Error: {Message}", e.Message);
+                        Log.Error(e, "Connection to TWS backend failed");
+                        throw;
                     }
-                }
 
-                var reader = new EReader(_client, readerSignal);
-                reader.Start();
-
-                new Thread(() =>
-                {
-                    while (_client.IsConnected())
-                    {
-                        readerSignal.waitForSignal();
-                        reader.processMsgs();
-                    }
-                })
-                {
-                    IsBackground = true
-                }.Start();
-            }
-            catch (Exception e)
-            {
-                Log.Error(e, "Connection to TWS backend failed");
-                throw;
+                    ConnectionInProgress = false;
+                });
             }
         }
 
@@ -109,8 +144,9 @@ namespace traderui.Server.IBKR
                 Log.Information("Stopped market data for {requestKey}", requestKey);
                 _client.cancelMktData(value);
                 _client.cancelHistoricalData(value);
-                GetPriceRequestStack.Remove(requestKey);
             }
+
+            GetPriceRequestStack.Clear();
         }
 
         public void GetHistoricPrice(string name)
@@ -131,11 +167,6 @@ namespace traderui.Server.IBKR
 
         public void GetTicker(string name)
         {
-            if (!_client.IsConnected())
-            {
-                Connect();
-            }
-
             Contract contract = new Contract
             {
                 // PrimaryExch = "NASDAQ",
@@ -152,11 +183,6 @@ namespace traderui.Server.IBKR
 
         public void GetTickerPrice(string name)
         {
-            if (!_client.IsConnected())
-            {
-                Connect();
-            }
-
             _client.reqMarketDataType(1);
             var requestId = _random.Next();
 
@@ -196,11 +222,6 @@ namespace traderui.Server.IBKR
 
         public void GetSymbol(string name)
         {
-            if (!_client.IsConnected())
-            {
-                Connect();
-            }
-
             _client.reqIds(-1);
             _client.reqMatchingSymbols(_impl.NextOrderId, name);
         }
@@ -257,11 +278,6 @@ namespace traderui.Server.IBKR
 
         public void GetAccountSummary(bool stopRequest)
         {
-            if (!_client.IsConnected())
-            {
-                Connect();
-            }
-
             _client.cancelAccountSummary(2000);
 
             if (!stopRequest)

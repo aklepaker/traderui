@@ -31,20 +31,6 @@ namespace traderui.Server.Controllers
             _mapper = mapper;
         }
 
-        [HttpGet("version")]
-        public IActionResult Get()
-        {
-            try
-            {
-                return Ok(FileVersionInfo.GetVersionInfo(Process.GetCurrentProcess().MainModule.FileName).ProductVersion);
-            }
-            catch (Exception)
-            {
-                Log.Warning("Could not retreive {Type} of {File}","ProductVersion", Process.GetCurrentProcess().MainModule.FileName);
-                return Ok("");
-            }
-        }
-
         [HttpGet("ticker/{symbol}")]
         public IActionResult Get(string symbol)
         {
