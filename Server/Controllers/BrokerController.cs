@@ -2,6 +2,7 @@ using AutoMapper;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
+using System;
 using System.Diagnostics;
 using System.Reflection;
 using traderui.Server.Commands;
@@ -35,7 +36,7 @@ namespace traderui.Server.Controllers
         {
             try
             {
-                return Ok(FileVersionInfo.GetVersionInfo(Process.GetCurrentProcess().MainModule.FileName+"2").ProductVersion);
+                return Ok(FileVersionInfo.GetVersionInfo(Process.GetCurrentProcess().MainModule.FileName).ProductVersion);
             }
             catch (Exception)
             {

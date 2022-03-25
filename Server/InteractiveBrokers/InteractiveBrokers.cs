@@ -2,7 +2,9 @@ using IBApi;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using Serilog;
-using System.Globalization;
+using System;
+using System.Collections.Generic;
+using System.Threading;
 using traderui.Server.Hubs;
 using traderui.Shared;
 
@@ -48,9 +50,16 @@ namespace traderui.Server.IBKR
             {
                 while (!_client.IsConnected())
                 {
-                    _client.eConnect(_serverOptions.Server, _serverOptions.Port, _serverOptions.ClientId);
-                    Thread.Sleep(1000);
-                    Log.Information("Waiting for connection to TWS");
+                    try
+                    {
+                        _client.eConnect(_serverOptions.Server, _serverOptions.Port, _serverOptions.ClientId);
+                        Thread.Sleep(1000);
+                        Log.Information("Waiting for connection to TWS");
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Error("Connection to TWS backend failed. Verify the TWS is running. Error: {Message}", e.Message);
+                    }
                 }
 
                 var reader = new EReader(_client, readerSignal);
@@ -70,7 +79,7 @@ namespace traderui.Server.IBKR
             }
             catch (Exception e)
             {
-                Log.Error(e, "Connection failed");
+                Log.Error(e, "Connection to TWS backend failed");
                 throw;
             }
         }
@@ -231,7 +240,7 @@ namespace traderui.Server.IBKR
                     OrderId = _impl.NextOrderId + 1,
                     OrderType = "STP",
                     TotalQuantity = webOrder.Qty,
-                    AuxPrice = Math.Round(webOrder.StopLossAt,numberOfDecimals,MidpointRounding.ToZero),
+                    AuxPrice = Math.Round(webOrder.StopLossAt, numberOfDecimals, MidpointRounding.ToZero),
                     Transmit = webOrder.Transmit,
                     Tif = "GTC" // Good til canceled
                 };
