@@ -49,14 +49,9 @@ jobs:
         run: |
           dotnet publish .\Server\traderui.Server.csproj -c Release -o .\Publish
 
-      - name: Archive Artifact
-        run: |
-          New-Item -Type Directory -Path Artifact
-          Compress-Archive -CompressionLevel Optimal -Path Publish\* -DestinationPath .\Artifact\traderui_${{ steps.version.outputs.filever }}.zip
-
       - name: Upload Binaries
         uses: actions/upload-artifact@v2
         with:
           name: traderui_${{ steps.version.outputs.filever }}.zip
-          path: .\Artifact\traderui_${{ steps.version.outputs.filever }}.zip
+          path: .\Publish\**
           retention-days: 30
