@@ -171,6 +171,14 @@ public class EWrapperImplementation : EWrapper
 
     public void orderStatus(int orderId, string status, double filled, double remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, string whyHeld, double mktCapPrice)
     {
+        // When the order is filled, we check to see if there are any
+        // child orders that should be updated with the correct size
+        // due to Bracket orders default to full position.
+        if (status.Equals("Filled"))
+        {
+            _broker.ModifyProfitOrderWithCorrectQuantity(orderId, filled);
+        }
+
         _brokerHub.Clients.All.SendAsync(nameof(OrderStatusMessage), new OrderStatusMessage
         {
             OrderId = orderId,
