@@ -16,5 +16,7 @@ namespace traderui.Server.Commands
         public double StopLossAt { get; set; }
         public bool Transmit { get; set; } = false;
         public ContractDetails ContractDetails { get; set; } = new();
+        public bool TakeProfitAndUpdateSellorder { get; set; }
+        public double TakeProfitAt { get; set; }
     }
 }
