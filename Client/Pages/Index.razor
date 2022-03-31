@@ -309,6 +309,29 @@ TODO: This file should be split into smaller components.
             </dd>
         </div>
 
+        <div class="bg-white-50 px-4 py-2 grid grid-cols-2 gap-4 px-6" >
+            <dt class="text-sm font-medium text-gray-500" >
+                Take partial profit and move stoploss.
+            </dt>
+            <dd class="mt-1 text-sm text-gray-900 mt-0" >
+                <Checkbox @bind-Checked=@TakeProfitAndUpdateStoploss OnChange=@(() => StateHasChanged()) />
+            </dd>
+        </div>
+
+        @if (TakeProfitAndUpdateStoploss)
+        {
+            <div class="bg-white-50 px-4 py-2" >
+                <Alert Type=@(AlertType.Warning) >
+                    <p>
+                        "Take partial profit and move stoploss." is a <b>Exprimental</b> feature and should be used at your own risk.
+                    </p>
+                    <p>
+                        Please consult the documentation before enabling this feature as it could have side-effects you should be familiar with before usage.
+                    </p>
+                </Alert>
+            </div>
+        }
+
     </div>
 </TabPane>
 </ChildContent>
