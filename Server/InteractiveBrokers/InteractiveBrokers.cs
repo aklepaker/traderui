@@ -51,7 +51,7 @@ namespace traderui.Server.IBKR
             return _client.IsConnected();
         }
 
-        private void Connect()
+        public void Connect()
         {
             var readerSignal = _impl.Signal;
             if (_client.IsConnected())

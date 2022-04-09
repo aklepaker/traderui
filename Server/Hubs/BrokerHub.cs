@@ -20,6 +20,7 @@ public class BrokerHub : Hub
     {
         if (!_broker.IsConnected())
         {
+            _broker.Connect();
             Clients.All.SendAsync(nameof(TWSDisconnectedMessage), new TWSDisconnectedMessage());
         }
         else

@@ -16,5 +16,6 @@ namespace traderui.Server.IBKR
         void GetPositions();
         void GetAccountSummary(bool stopRequest);
         bool IsConnected();
+        void Connect();
     }
 }
