@@ -134,10 +134,6 @@ namespace traderui.Client.Pages
             });
 
             TempSymbol = await localStorage.GetItemAsync<string>("symbol");
-            if (!string.IsNullOrWhiteSpace(TempSymbol))
-            {
-                OnSymbolChange();
-            }
 
             HubConnection connection = new HubConnectionBuilder()
                 .WithUrl(new Uri($"{NavigationManager.Uri}hub/broker"))
@@ -375,7 +371,6 @@ namespace traderui.Client.Pages
             AdrData.Clear();
             Symbol = TempSymbol;
             await BrokerService.GetTicker(Symbol, CancellationToken.None);
-            await BrokerService.GetHistoricalBarData(Symbol, AdrBarDataRequest, CancellationToken.None);
             StateHasChanged();
         }
 
