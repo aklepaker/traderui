@@ -110,6 +110,7 @@ namespace traderui.Client.Pages
         public string LogMessages { get; set; }
 
         public bool IsConnectedToTws { get; set; } = true;
+        public bool ObeyPositionSizeOnMaxLoss { get; set; } = true;
 
         protected override async void OnInitialized()
         {
@@ -421,12 +422,31 @@ namespace traderui.Client.Pages
 
         private void RecalculatePositionSize()
         {
+            /*
+            Only recalculate the position size if
+            we didn't set a manual position size.
+            */
             if (!SizeIsDirty)
             {
                 if (MaxLossInDollar > 0)
                 {
-                    var maxLossSize = MaxLossInDollar / (MarketPrice - StopLossAt);
-                    Size = Math.Round(maxLossSize, MidpointRounding.ToZero);
+                    /*
+                    If we've set a max loss, we calculate the position size
+                    based on the max loss amount. If enabled, we'll obey
+                    the max position size in percent and our position size
+                    will be within our limits.
+                    */
+
+                    var delta = (Price - StopLossAt);
+                    var maxPositionSize = (PositionSize / 100) * AccountSize;
+                    var maxLossSize = MaxLossInDollar / (delta);
+
+                    if (ObeyPositionSizeOnMaxLoss && (maxLossSize * Price) > maxPositionSize)
+                    {
+                        maxLossSize = maxPositionSize / Price;
+                    }
+
+                    Size = Math.Floor(maxLossSize);
                 }
                 else
                 {
@@ -584,7 +604,7 @@ namespace traderui.Client.Pages
         private async void OnMaxLossChange(double d)
         {
             MaxLossInDollar = d;
-            await localStorage.SetItemAsync("maxLossInDollar", MaxLossInDollar); // In percentage
+            await localStorage.SetItemAsync("maxLossInDollar", MaxLossInDollar);
             RecalculateNumbers();
         }
 

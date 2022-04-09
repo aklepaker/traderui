@@ -276,12 +276,18 @@ TODO: This file should be split into smaller components.
             </dd>
         </div>
 
-        <div class="bg-gray-50 px-4 py-2 grid grid-cols-2 gap-4 px-6" >
+        <div class="bg-white-50 px-4 py-2 grid grid-cols-2 gap-4 px-6" >
             <dt class="text-sm font-medium text-gray-500" >
                 Max loss $
             </dt>
             <dd class="mt-1 text-sm text-gray-900 mt-0" >
                 <AntDesign.InputNumber name="MaxLoss" DefaultValue="@MaxLossInDollar" ValueChanged=@((double v) => OnMaxLossChange(v)) style="width: 75px" Max="100" Min="0" />
+            </dd>
+            <dt class="text-xs font-medium text-gray-500" >
+                Max position size is @PositionSize% (@(Helper.CurrencyFormat(PositionSize / 100 * AccountSize)))
+            </dt>
+            <dd class="mt-1 text-sm text-gray-900 mt-0" >
+                <Checkbox @bind-Checked=@ObeyPositionSizeOnMaxLoss OnChange=@(() => StateHasChanged()) />
             </dd>
         </div>
 
