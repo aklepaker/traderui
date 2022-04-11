@@ -1,5 +1,4 @@
 using MediatR;
-using Serilog;
 using traderui.Server.Controllers;
 using traderui.Server.IBKR;
 
@@ -16,7 +15,15 @@ namespace traderui.Server.Commands
 
         public Task<Unit> Handle(GetPnLCommand request, CancellationToken cancellationToken)
         {
-            _broker.GetPnL(request.Account);
+            if (request.ContractId > 0)
+            {
+                _broker.GetTickerPnL(request.Account, request.ContractId, request.Active);
+            }
+            else
+            {
+                _broker.GetPnL(request.Account);
+            }
+
             return Task.FromResult(new Unit());
         }
     }
