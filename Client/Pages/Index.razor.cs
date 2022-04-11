@@ -3,6 +3,7 @@ using IBApi;
 using Microsoft.AspNetCore.SignalR.Client;
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading;
 using traderui.Client.Models;
 using traderui.Shared;
@@ -219,17 +220,15 @@ namespace traderui.Client.Pages
 
                 if (ix == -1)
                 {
-                    await BrokerService.GetTickerPnL(AccountName, position.PositionId, true, CancellationToken.None);
+                    await BrokerService.GetTickerPnL(positionEvent.Account, position.PositionId, true, CancellationToken.None);
                     Positions.Add(position);
-                }
-                else if (ix > 0 && position.Size > 0)
-                {
-                    Positions[ix] = position;
                 }
                 else
                 {
-                    Positions.RemoveAt(ix);
+                    Positions[ix] = position;
                 }
+
+                StateHasChanged();
             });
 
             connection.On(nameof(HistoricalDataUpdateMessage), (HistoricalDataUpdateMessage historicalDataUpdateEvent) =>
