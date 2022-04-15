@@ -2,10 +2,6 @@ using IBApi;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using Serilog;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using traderui.Server.Hubs;
 using traderui.Shared;
 using traderui.Shared.Events;
@@ -22,6 +18,7 @@ namespace traderui.Server.IBKR
 
         private Random _random = new Random();
         private readonly ServerOptions _serverOptions;
+        private CancellationTokenSource _connectionToken;
         private Dictionary<string, int> CurrentRequestStack { get; set; } = new Dictionary<string, int>();
         private Dictionary<string, int> GetPriceRequestStack { get; set; } = new Dictionary<string, int>();
 
@@ -36,9 +33,62 @@ namespace traderui.Server.IBKR
         {
             _serverOptions = serverOptions.Value;
             _brokerHub = brokerHub;
-            _impl = new EWrapperImplementation(_brokerHub);
+            _impl = new EWrapperImplementation(_brokerHub, this);
             _client = _impl.ClientSocket;
             Connect();
+        }
+
+        /// <summary>
+        /// Initiate the TWS reader with a <see cref="CancellationToken" /> so we don't create
+        /// multiple instances of the reader on reconnect
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        private void StartTwsReader(CancellationToken cancellationToken)
+        {
+            var readerSignal = _impl.Signal;
+            var reader = new EReader(_client, readerSignal);
+            reader.Start();
+
+            new Thread(() =>
+            {
+                try
+                {
+                    while (_client.IsConnected() && !cancellationToken.IsCancellationRequested)
+                    {
+                        readerSignal.waitForSignal();
+                        reader.processMsgs();
+                    }
+                }
+                catch (Exception e)
+                {
+                    Log.Error(e.Message);
+                }
+            })
+
+            {
+                IsBackground = true,
+            }.Start();
+        }
+
+        /// <summary>
+        /// Initiate a reconnection handler requesting server time each second, when this request
+        /// fail a Connect() call will trigger and the cancellationToken will be canceled, so we
+        /// don't spam the endpoint
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        private void StartReconnectionThread(CancellationToken cancellationToken)
+        {
+            new Thread(() =>
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    _client.reqCurrentTime();
+                    Thread.Sleep(1000);
+                }
+            })
+            {
+                IsBackground = true
+            }.Start();
         }
 
         public bool IsConnected()
@@ -53,7 +103,6 @@ namespace traderui.Server.IBKR
 
         public void Connect()
         {
-            var readerSignal = _impl.Signal;
             if (_client.IsConnected())
             {
                 return;
@@ -64,6 +113,12 @@ namespace traderui.Server.IBKR
             // only one attempt at a time.
             if (!ConnectionInProgress)
             {
+                CancellationToken cancellationToken = new();
+                if (_connectionToken is not null)
+                {
+                    _connectionToken.Cancel();
+                }
+
                 ConnectionInProgress = true;
 
                 // The connection attempt blocks the current process
@@ -77,6 +132,13 @@ namespace traderui.Server.IBKR
                             try
                             {
                                 _client.eConnect(_serverOptions.Server, _serverOptions.Port, _serverOptions.ClientId);
+
+                                // Create new CancellationToken
+                                _connectionToken = new CancellationTokenSource();
+                                cancellationToken = _connectionToken.Token;
+
+                                StartReconnectionThread(cancellationToken);
+
                                 _brokerHub.Clients.All.SendAsync(nameof(TWSConnectedMessage), new TWSConnectedMessage());
                             }
                             catch (Exception e)
@@ -92,21 +154,7 @@ namespace traderui.Server.IBKR
                             Thread.Sleep(1000);
                         }
 
-                        ConnectionInProgress = false;
-                        var reader = new EReader(_client, readerSignal);
-                        reader.Start();
-
-                        new Thread(() =>
-                        {
-                            while (_client.IsConnected())
-                            {
-                                readerSignal.waitForSignal();
-                                reader.processMsgs();
-                            }
-                        })
-                        {
-                            IsBackground = true
-                        }.Start();
+                        StartTwsReader(cancellationToken);
                     }
                     catch (Exception e)
                     {
@@ -115,6 +163,8 @@ namespace traderui.Server.IBKR
                     }
 
                     ConnectionInProgress = false;
+
+                    return Task.CompletedTask;
                 });
             }
         }

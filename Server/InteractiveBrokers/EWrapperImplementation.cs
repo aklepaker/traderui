@@ -1,10 +1,9 @@
 using IBApi;
 using Microsoft.AspNetCore.SignalR;
 using Serilog;
-using System;
-using System.Collections.Generic;
 using System.Text.Json;
 using traderui.Server.Hubs;
+using traderui.Server.IBKR;
 using traderui.Shared.Events;
 
 public class EWrapperImplementation : EWrapper
@@ -14,10 +13,12 @@ public class EWrapperImplementation : EWrapper
 
     public readonly EReaderSignal Signal;
     public IHubContext<BrokerHub> _brokerHub;
+    private readonly IInteractiveBrokers _broker;
 
-    public EWrapperImplementation(IHubContext<BrokerHub> brokerHub)
+    public EWrapperImplementation(IHubContext<BrokerHub> brokerHub, IInteractiveBrokers broker)
     {
         _brokerHub = brokerHub;
+        _broker = broker;
         Signal = new EReaderMonitorSignal();
         ClientSocket = new EClientSocket(this, Signal);
     }
@@ -63,6 +64,10 @@ public class EWrapperImplementation : EWrapper
 
             case 200:
                 _brokerHub.Clients.All.SendAsync(nameof(ErrorCodeMessage), errorCodeMessage);
+                break;
+
+            case 504:
+                _broker.Connect();
                 break;
         }
     }
