@@ -112,6 +112,7 @@ namespace traderui.Client.Pages
 
         public bool IsConnectedToTws { get; set; } = true;
         public bool TakeProfitAndUpdateStoploss { get; set; }
+        public bool HideTakeProfitAndUpdateStoplossWarning { get; set; }
         public bool ObeyPositionSizeOnMaxLoss { get; set; } = true;
 
         protected override async void OnInitialized()
@@ -119,9 +120,11 @@ namespace traderui.Client.Pages
             AdrBarDataRequest = _randomNumberGenerator.Next();
             ContractDetails = new ContractDetails();
             Symbol = "";
-            Risk = await localStorage.GetItemAsync<double>("risk"); // In percentage
             MaxLossInDollar = await localStorage.GetItemAsync<double>("maxLossInDollar");
             RiskRatioTarget = await localStorage.GetItemAsync<double>("riskRatioTarget");
+            HideTakeProfitAndUpdateStoplossWarning = await localStorage.GetItemAsync<bool>("hideTakeProfitAndUpdateStoplossWarning");
+            TakeProfitAndUpdateStoploss = await localStorage.GetItemAsync<bool>("takeProfitAndUpdateStoploss");
+            Risk = await localStorage.GetItemAsync<double>("risk"); // In percentage
             AccountSize = 5000.0; // In USD
             Cost = 0;
             MaxLoss = 0;
@@ -136,10 +139,6 @@ namespace traderui.Client.Pages
             });
 
             TempSymbol = await localStorage.GetItemAsync<string>("symbol");
-            if (!string.IsNullOrWhiteSpace(TempSymbol))
-            {
-                OnSymbolChange();
-            }
 
             HubConnection connection = new HubConnectionBuilder()
                 .WithUrl(new Uri($"{NavigationManager.Uri}hub/broker"))
@@ -375,7 +374,6 @@ namespace traderui.Client.Pages
             AdrData.Clear();
             Symbol = TempSymbol;
             await BrokerService.GetTicker(Symbol, CancellationToken.None);
-            await BrokerService.GetHistoricalBarData(Symbol, AdrBarDataRequest, CancellationToken.None);
             StateHasChanged();
         }
 
@@ -422,12 +420,31 @@ namespace traderui.Client.Pages
 
         private void RecalculatePositionSize()
         {
+            /*
+            Only recalculate the position size if
+            we didn't set a manual position size.
+            */
             if (!SizeIsDirty)
             {
                 if (MaxLossInDollar > 0)
                 {
-                    var maxLossSize = MaxLossInDollar / (MarketPrice - StopLossAt);
-                    Size = Math.Round(maxLossSize, MidpointRounding.ToZero);
+                    /*
+                    If we've set a max loss, we calculate the position size
+                    based on the max loss amount. If enabled, we'll obey
+                    the max position size in percent and our position size
+                    will be within our limits.
+                    */
+
+                    var delta = (Price - StopLossAt);
+                    var maxPositionSize = (PositionSize / 100) * AccountSize;
+                    var maxLossSize = MaxLossInDollar / (delta);
+
+                    if (ObeyPositionSizeOnMaxLoss && (maxLossSize * Price) > maxPositionSize)
+                    {
+                        maxLossSize = maxPositionSize / Price;
+                    }
+
+                    Size = Math.Floor(maxLossSize);
                 }
                 else
                 {
@@ -500,6 +517,8 @@ namespace traderui.Client.Pages
                 LmtPrice = Price,
                 StopLoss = true,
                 StopLossAt = StopLossAt,
+                TakeProfitAt = Price + ((Price - StopLossAt)*2),
+                TakeProfitAndUpdateSellorder = TakeProfitAndUpdateStoploss,
             };
 
             BrokerService.BuyOrder(Symbol, orderRequest, CancellationToken.None);
@@ -518,6 +537,8 @@ namespace traderui.Client.Pages
                 LmtPrice = Price,
                 StopLoss = false,
                 StopLossAt = StopLossAt,
+                TakeProfitAt = Price + ((Price - StopLossAt)*2),
+                TakeProfitAndUpdateSellorder = TakeProfitAndUpdateStoploss,
             };
 
             BrokerService.BuyOrder(Symbol, orderRequest, CancellationToken.None);
@@ -585,7 +606,7 @@ namespace traderui.Client.Pages
         private async void OnMaxLossChange(double d)
         {
             MaxLossInDollar = d;
-            await localStorage.SetItemAsync("maxLossInDollar", MaxLossInDollar); // In percentage
+            await localStorage.SetItemAsync("maxLossInDollar", MaxLossInDollar);
             RecalculateNumbers();
         }
 
@@ -594,6 +615,18 @@ namespace traderui.Client.Pages
             RiskRatioTarget = d;
             await localStorage.SetItemAsync("riskRatioTarget", RiskRatioTarget); // In percentage
             RecalculateNumbers();
+        }
+
+        private async void OnTakeProfitAndUpdateStoplossChange()
+        {
+            await localStorage.SetItemAsync("takeProfitAndUpdateStoploss", TakeProfitAndUpdateStoploss);
+            StateHasChanged();
+        }
+
+        private async void OnTakeProfitAndUpdateStoplossWarningClose()
+        {
+            HideTakeProfitAndUpdateStoplossWarning = true;
+            await localStorage.SetItemAsync("hideTakeProfitAndUpdateStoplossWarning", HideTakeProfitAndUpdateStoplossWarning);
         }
     }
 }
