@@ -22,6 +22,8 @@ namespace traderui.Server.IBKR
         private Dictionary<string, int> CurrentRequestStack { get; set; } = new Dictionary<string, int>();
         private Dictionary<string, int> GetPriceRequestStack { get; set; } = new Dictionary<string, int>();
 
+        private Dictionary<int, Order> OrderToModify { get; set; } = new();
+        private Dictionary<int, Contract> ContractOfOrdersToModify { get; set; } = new();
         private bool ConnectionInProgress { get; set; } = false;
 
         /// <summary>
@@ -169,6 +171,35 @@ namespace traderui.Server.IBKR
             }
         }
 
+        /// <summary>
+        /// Modify the "ProfitTaker" order with half of the filled position.
+        /// </summary>
+        /// <param name="orderId">Parent orderId of the ProfitTaker order</param>
+        /// <param name="filled">The filled amount of main order</param>
+        public void ModifyProfitOrderWithCorrectQuantity(int orderId, double filled)
+        {
+            if (OrderToModify.TryGetValue(orderId, out Order order)
+                && ContractOfOrdersToModify.TryGetValue(orderId, out Contract contract))
+            {
+                if (order.ParentId == orderId)
+                {
+                    // I want half Eddie!
+                    var half = Math.Floor(filled / 2);
+
+                    // Change the configuration
+                    order.TotalQuantity = half;
+                    order.Transmit = true;
+
+                    // Place the orders
+                    _client.placeOrder(order.OrderId, contract, order);
+
+                    // Remove the orders from the modify dictionary
+                    ContractOfOrdersToModify.Remove(orderId);
+                    OrderToModify.Remove(orderId);
+                }
+            }
+        }
+
         public void GetTickerPnL(string account, int conId, bool active)
         {
             try
@@ -279,6 +310,8 @@ namespace traderui.Server.IBKR
         public void PlaceOrder(WebOrder webOrder)
         {
             _client.reqIds(-1);
+            var oneCancelAllGroup = $"{webOrder.ContractDetails.Contract.Symbol}_{_impl.NextOrderId}";
+            webOrder.Qty = Math.Floor(webOrder.Qty / 2) * 2;
 
             Order order = new Order
             {
@@ -300,16 +333,63 @@ namespace traderui.Server.IBKR
 
             _client.placeOrder(order.OrderId, webOrder.ContractDetails.Contract, order);
 
-            var numberOfDecimals = webOrder.StopLossAt is > 0 and < 1 ? 4 : 2;
+            if (webOrder.TakeProfitAndUpdateSellorder)
+            {
+                var numberOfDecimals = webOrder.TakeProfitAt is > 0 and < 1 ? 4 : 2;
+                var numberOfOrdersToSell = Math.Ceiling(webOrder.Qty / 2);
+
+                _impl.NextOrderId++;
+                Order profit = new Order
+                {
+                    Action = "SELL",
+                    ParentId = order.OrderId,
+                    OrderId = _impl.NextOrderId,
+                    OrderType = "LMT",
+                    TotalQuantity = numberOfOrdersToSell,
+                    LmtPrice = Math.Round(webOrder.TakeProfitAt, numberOfDecimals, MidpointRounding.ToZero),
+                    Transmit = false,
+                    Tif = "GTC" // Good til canceled
+                };
+
+                ContractOfOrdersToModify[order.OrderId] = webOrder.ContractDetails.Contract;
+                OrderToModify[order.OrderId] = profit;
+
+                _client.placeOrder(profit.OrderId, webOrder.ContractDetails.Contract, profit);
+
+                _impl.NextOrderId++;
+                Order profitStopLoss = new Order
+                {
+                    Action = "SELL",
+                    ParentId = profit.OrderId,
+                    OrderId = _impl.NextOrderId,
+                    OrderType = "STP",
+                    OcaGroup = oneCancelAllGroup,
+                    OcaType = 2,
+                    TotalQuantity = webOrder.Qty - numberOfOrdersToSell,
+                    AuxPrice = Math.Round(webOrder.Price, numberOfDecimals, MidpointRounding.ToZero),
+                    LmtPrice = Math.Round(webOrder.Price, numberOfDecimals, MidpointRounding.ToZero),
+                    Transmit = webOrder.Transmit,
+                    Tif = "GTC" // Good til canceled
+                };
+                _client.placeOrder(profitStopLoss.OrderId, webOrder.ContractDetails.Contract, profitStopLoss);
+            }
 
             if (webOrder.Action == MarketAction.BUY)
             {
+                var numberOfDecimals = webOrder.StopLossAt is > 0 and < 1 ? 4 : 2;
+                _impl.NextOrderId++;
                 Order stopLoss = new Order
                 {
                     Action = "SELL",
                     ParentId = order.OrderId,
-                    OrderId = _impl.NextOrderId + 1,
+                    OrderId = _impl.NextOrderId,
                     OrderType = "STP",
+                    OcaGroup = oneCancelAllGroup,
+
+                    // Remaining orders are proportionately reduced in size with no block.
+                    // This is the only way we get the main SL-order to cancle when the profit-taker
+                    // activates.
+                    OcaType = 3,
                     TotalQuantity = webOrder.Qty,
                     AuxPrice = Math.Round(webOrder.StopLossAt, numberOfDecimals, MidpointRounding.ToZero),
                     Transmit = webOrder.Transmit,

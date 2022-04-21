@@ -16,6 +16,7 @@ namespace traderui.Server.IBKR
         void GetPositions();
         void GetAccountSummary(bool stopRequest);
         bool IsConnected();
+        void ModifyProfitOrderWithCorrectQuantity(int orderId, double filled);
         void Connect();
     }
 }
