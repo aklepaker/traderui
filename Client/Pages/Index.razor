@@ -8,6 +8,7 @@
 @using Blazored.LocalStorage
 @using traderui.Client.Services
 @using traderui.Shared
+@using System.Globalization
 
 @*
 TODO: This file should be split into smaller components.
@@ -111,11 +112,13 @@ TODO: This file should be split into smaller components.
                                      DefaultValue=@Price
                                      OnChange="@((double value) => OnOverridePriceChange(value))"
                                      OnBlur=@(() => RecalculateNumbers())
-                                     style="width: 100px" Min="0" />
+                                     style="width: 100px" Min="0" >
+                        <AddOnBefore>$</AddOnBefore>
+                    </AntDesign.Input>
                 </dd>
             </div>
 
-            <div class="bg-gray-50 px-4 py-2 grid grid-cols-2 gap-4 px-6" >
+            <div class="bg-gray-50 py-2 grid grid-cols-2 gap-2 px-6" >
                 <dt class="text-sm font-medium text-gray-500" >
                     Stop-Loss
                     <div class="text-xs" >
@@ -123,11 +126,13 @@ TODO: This file should be split into smaller components.
                     </div>
                 </dt>
                 <dd class="mt-1 text-sm text-gray-900 mt-0" >
-                    <AntDesign.Input name="Size" Value=@(StopLossAt) DefaultValue="@StopLossAt" OnChange=@((double v) => OnStopLossChange(v)) style="width: 100px" />
-                </dd>
+                    <AntDesign.Input name="Size" Value=@(StopLossAt) DefaultValue="@StopLossAt" OnChange=@((double v) => OnStopLossChange(v)) style="width: 100px">
+                        <AddOnBefore>$</AddOnBefore>
+                    </AntDesign.Input>
+                    </dd>
             </div>
 
-            <div class="bg-white-50 px-4 py-2 grid grid-cols-2 gap-4 px-6" >
+            <div class="bg-white-50 px-4 py-2 grid grid-cols-2 gap-2 px-6" >
                 <dt class="text-sm font-medium text-gray-500" >
                     Size
                 </dt>
@@ -136,7 +141,7 @@ TODO: This file should be split into smaller components.
                 </dd>
             </div>
 
-            <div class="bg-gray-50 px-4 py-2 grid grid-cols-2 gap-4 px-6" >
+            <div class="bg-gray-50 px-4 py-2 grid grid-cols-2 gap-2 px-6" >
                 <dt class="text-sm font-medium text-gray-500" >
                     Order type
                 </dt>
@@ -148,7 +153,7 @@ TODO: This file should be split into smaller components.
                 </dd>
             </div>
 
-            <div class="bg-white-50 px-4 py-2 grid grid-cols-2 gap-4 px-6" >
+            <div class="bg-white-50 px-4 py-2 grid grid-cols-2 gap-2 px-6" >
                 <dt class="text-sm font-medium text-gray-500" >
                     Transmitt Order
                 </dt>
@@ -157,23 +162,23 @@ TODO: This file should be split into smaller components.
                 </dd>
             </div>
 
-            <div class="bg-gray-50 px-4 py-2 grid grid-cols-2 gap-4 px-6" >
-                <dt class="text-sm font-medium text-gray-500" >
-                    Place order as a
-                </dt>
-                <dd class="mt-1 text-sm text-gray-900 mt-0" >
-                    <Switch @bind-Checked=@IsBuyOrder OnChange=@(() => RecalculateNumbers()) >
-                        <CheckedChildrenTemplate>
-                            BUY ORDER
-                        </CheckedChildrenTemplate>
-                        <UnCheckedChildrenTemplate>
-                            SELL ORDER
-                        </UnCheckedChildrenTemplate>
-                    </Switch>
-                </dd>
-            </div>
+            @* <div class="bg-gray-50 px-4 py-2 grid grid-cols-2 gap-4 px-6" > *@
+            @*     <dt class="text-sm font-medium text-gray-500" > *@
+            @*         Place order as a *@
+            @*     </dt> *@
+            @*     <dd class="mt-1 text-sm text-gray-900 mt-0" > *@
+            @*         <Switch @bind-Checked=@IsBuyOrder OnChange=@(() => RecalculateNumbers()) > *@
+            @*             <CheckedChildrenTemplate> *@
+            @*                 BUY ORDER *@
+            @*             </CheckedChildrenTemplate> *@
+            @*             <UnCheckedChildrenTemplate> *@
+            @*                 SELL ORDER *@
+            @*             </UnCheckedChildrenTemplate> *@
+            @*         </Switch> *@
+            @*     </dd> *@
+            @* </div> *@
 
-            <div class="bg-white-50 px-4 py-2 grid grid-cols-2 gap-4 px-6" >
+            <div class="bg-white-50 px-4 py-2 grid grid-cols-2 gap-2 px-6" >
                 <dt class="text-sm font-medium text-gray-500" >
                     Take partial profit and move stoploss.
                 </dt>
@@ -181,6 +186,29 @@ TODO: This file should be split into smaller components.
                     <Checkbox @bind-Checked=@TakeProfitAndUpdateStoploss OnChange=@(() => OnTakeProfitAndUpdateStoplossChange()) />
                 </dd>
             </div>
+
+            @if (TakeProfitAndUpdateStoploss)
+            {
+                <div class="bg-white-50 px-4 py-2 grid grid-cols-2 gap-2 px-6" >
+                    <dt class="text-sm font-medium text-gray-500" >
+                        Profit target
+                    </dt>
+                    <dd class="mt-1 text-sm text-gray-900 mt-0" >
+                        <div class="grid grid-cols-2 grid-flow-row text-xs" >
+                            <div>
+                                <AntDesign.Input name="Size" Value=@TakeProfitAtPercent DefaultValue=@TakeProfitAtPercent ValueChanged=@((double v) => OnTakeProfitAtPercentChange(v)) style="width: 70px" Min="0" >
+                                    <AddOnBefore>%</AddOnBefore>
+                                </AntDesign.Input>
+                            </div>
+                            <div>
+                                <AntDesign.Input name="Size" Value=@TakeProfitAt DefaultValue=@TakeProfitAt ValueChanged=@((double v) => OnTakeProfitAtChange(v)) style="width: 75px" Min="0" >
+                                    <AddOnBefore>$</AddOnBefore>
+                                </AntDesign.Input>
+                            </div>
+                        </div>
+                    </dd>
+                </div>
+            }
 
             <div class="bg-white-50 px-4 py-2 grid grid-cols-1 gap-4 px-6" >
                 <Button Type="@ButtonType.Primary"
@@ -209,14 +237,21 @@ TODO: This file should be split into smaller components.
             {
                 <div class="bg-white-50 px-4 py-2 grid grid-cols-1 gap-4 px-6" >
                     <Alert Type=@(IsBuyOrder ? AlertType.Info : AlertType.Error) >
-                        You are about to @(IsBuyOrder ? "buy" : "sell") <b>@Size</b> shares of <b>@Symbol?.ToUpper()</b> at <b>@(Helper.CurrencyFormat(Price))</b> for a total of <b>@(Helper.CurrencyFormat(Cost))</b>.<br />
+                        You are about to @(IsBuyOrder ? "buy" : "sell") <b>@Size</b> shares of <b>@Symbol?.ToUpper()</b> at <b>@(Helper.CurrencyFormat(Price))</b> for a total of <b>@(Helper.CurrencyFormat(Cost))</b>. 
                         @if (IsBuyOrder)
                         {
                             <span>
-                                Stop-loss at <b>@(Helper.CurrencyFormat(StopLossAt))</b> (@(Helper.Percent((1 - (StopLossAt / Price)) * 100))%) giving a max loss for this trade at <b>@(Helper.CurrencyFormat(MaxLoss))</b><br />
+                                Stop-loss at <b>@(Helper.CurrencyFormat(StopLossAt))</b> (@(Helper.Percent((1 - (StopLossAt / Price)) * 100))%) giving a max loss for this trade at <b>@(Helper.CurrencyFormat(MaxLoss))</b>.
                             </span>
                         }
 
+                        @if (TakeProfitAndUpdateStoploss)
+                        {
+                            <span>
+                            Partial profit enabled at <b>$@(TakeProfitAt)</b> giving a profit of <b>@(Helper.CurrencyFormat((TakeProfitAt - Price) * Size / 2))</b> 
+                            </span>
+                        }
+                        <br/>
                         @if (!IsBuyOrder)
                         {
                             <br />
