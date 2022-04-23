@@ -282,7 +282,7 @@ namespace traderui.Server.IBKR
             GetPriceRequestStack.Add(name, requestId);
 
             Log.Information("Requested market data for {name}", name);
-            _client.reqMktData(requestId, contract, "221", false, false, null);
+            _client.reqMktData(requestId, contract, "165, 221,233,295,595", false, false, null);
             _client.reqHistoricalData(requestId, contract, String.Empty, "1 D", "1 day", "TRADES", 1, 1, true, null);
         }
 

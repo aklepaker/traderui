@@ -38,6 +38,8 @@ namespace traderui.Client.Pages
         public double AskPrice { get; set; }
         public double LowOfDay { get; set; }
         public double HighOfDay { get; set; }
+        public double Volume { get; set; }
+        public double AvgVolume { get; set; }
         public bool UseLowOfDayAsStopLoss { get; set; }
         public double BidPrice { get; set; }
         public double ClosePrice { get; set; }
@@ -372,6 +374,23 @@ namespace traderui.Client.Pages
                     PriceLoaded = true;
                     RecalculateNumbers();
                 }
+            });
+
+            connection.On(nameof(TickSizeMessage), (TickSizeMessage tickSizeMessage) =>
+            {
+                switch (tickSizeMessage.Field)
+                {
+                    case 8:
+                        Volume = tickSizeMessage.Size * ContractDetails.MdSizeMultiplier;
+                        break;
+                    case 21:
+                        AvgVolume = tickSizeMessage.Size * ContractDetails.MdSizeMultiplier;
+                        break;
+                }
+            });
+
+            connection.On(nameof(TickGenericMessage), (TickGenericMessage tickGenericMessage) =>
+            {
             });
 
             connection.On(nameof(TickByTickBidAskMessage), (TickByTickBidAskMessage tickByTickBidAskEvent) =>
