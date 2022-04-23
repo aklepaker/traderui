@@ -1,10 +1,6 @@
 ﻿using AntDesign;
 using IBApi;
 using Microsoft.AspNetCore.SignalR.Client;
-using System;
-using System.Collections.Generic;
-using System.Text.Json;
-using System.Threading;
 using traderui.Client.Models;
 using traderui.Shared;
 using traderui.Shared.Events;
@@ -114,6 +110,41 @@ namespace traderui.Client.Pages
         public bool TakeProfitAndUpdateStoploss { get; set; }
         public bool HideTakeProfitAndUpdateStoplossWarning { get; set; }
         public bool ObeyPositionSizeOnMaxLoss { get; set; } = true;
+
+        public double OverrideTakeProfitAt { get; set; } = 0;
+
+        public double TakeProfitAt
+        {
+            get
+            {
+                if (OverrideTakeProfitAt > 0)
+                {
+                    return OverrideTakeProfitAt;
+                }
+
+                if (OverrideTakeProfitAtPercent > 0)
+                {
+                    return Math.Round(Price + (Price * (OverrideTakeProfitAtPercent / 100)), 2, MidpointRounding.AwayFromZero);
+                }
+
+                return Math.Round(Price + ((Price - StopLossAt) * 2), 2, MidpointRounding.AwayFromZero);
+            }
+        }
+
+        public double TakeProfitAtPercent
+        {
+            get
+            {
+                if (OverrideTakeProfitAtPercent > 0)
+                {
+                    return OverrideTakeProfitAtPercent;
+                }
+
+                return Math.Round(100 * ((TakeProfitAt / Price) -1 ), 2, MidpointRounding.AwayFromZero);
+            }
+        }
+
+        public double OverrideTakeProfitAtPercent { get; set; } = 0;
 
         protected override async void OnInitialized()
         {
@@ -501,6 +532,9 @@ namespace traderui.Client.Pages
             PriceType = "Price";
             OverridePrice = 0;
             OverrideStopLoss = 0;
+            OverrideTakeProfitAt = 0;
+            OverrideTakeProfitAtPercent = 0;
+
             BrokerService.GetTickerPrice(Symbol, CancellationToken.None);
         }
 
@@ -517,8 +551,8 @@ namespace traderui.Client.Pages
                 LmtPrice = Price,
                 StopLoss = true,
                 StopLossAt = StopLossAt,
-                TakeProfitAt = Price + ((Price - StopLossAt)*2),
-                TakeProfitAndUpdateSellorder = TakeProfitAndUpdateStoploss,
+                TakeProfitAt = TakeProfitAt,
+                TakeProfitAndUpdateStoploss = TakeProfitAndUpdateStoploss && TakeProfitAt > 0,
             };
 
             BrokerService.BuyOrder(Symbol, orderRequest, CancellationToken.None);
@@ -536,9 +570,7 @@ namespace traderui.Client.Pages
                 Transmit = TransmitOrder,
                 LmtPrice = Price,
                 StopLoss = false,
-                StopLossAt = StopLossAt,
-                TakeProfitAt = Price + ((Price - StopLossAt)*2),
-                TakeProfitAndUpdateSellorder = TakeProfitAndUpdateStoploss,
+                StopLossAt = StopLossAt
             };
 
             BrokerService.BuyOrder(Symbol, orderRequest, CancellationToken.None);
@@ -587,6 +619,8 @@ namespace traderui.Client.Pages
             ClosePrice = 0;
             OverridePrice = 0;
             OverrideStopLoss = 0;
+            OverrideTakeProfitAt = 0;
+            OverrideTakeProfitAtPercent = 0;
 
             if (reload)
             {
@@ -627,6 +661,20 @@ namespace traderui.Client.Pages
         {
             HideTakeProfitAndUpdateStoplossWarning = true;
             await localStorage.SetItemAsync("hideTakeProfitAndUpdateStoplossWarning", HideTakeProfitAndUpdateStoplossWarning);
+        }
+
+        private void OnTakeProfitAtChange(double d)
+        {
+            OverrideTakeProfitAt = d;
+            OverrideTakeProfitAtPercent = 0;
+            StateHasChanged();
+        }
+
+        private void OnTakeProfitAtPercentChange(double d)
+        {
+            OverrideTakeProfitAtPercent = d;
+            OverrideTakeProfitAt = 0;
+            StateHasChanged();
         }
     }
 }
