@@ -89,6 +89,12 @@ public class EWrapperImplementation : EWrapper
 
     public void tickSize(int tickerId, int field, int size)
     {
+        _brokerHub.Clients.All.SendAsync(nameof(TickSizeMessage), new TickSizeMessage
+        {
+            TickerId = tickerId,
+            Field = field,
+            Size = size,
+        });
     }
 
     public void tickString(int tickerId, int field, string value)
@@ -97,6 +103,12 @@ public class EWrapperImplementation : EWrapper
 
     public void tickGeneric(int tickerId, int field, double value)
     {
+        _brokerHub.Clients.All.SendAsync(nameof(TickGenericMessage), new TickGenericMessage
+        {
+            TickerId = tickerId,
+            Field = field,
+            Value = value,
+        });
     }
 
     public void tickEFP(int tickerId, int tickType, double basisPoints, string formattedBasisPoints, double impliedFuture, int holdDays, string futureLastTradeDate, double dividendImpact, double dividendsToLastTradeDate)

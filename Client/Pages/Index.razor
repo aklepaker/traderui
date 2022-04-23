@@ -81,6 +81,17 @@ TODO: This file should be split into smaller components.
                             </div>
                         }
 
+                        @if (Volume / AvgVolume > 0)
+                        {
+                            <div>
+                                Volume
+                            </div>
+                            <div title=@($"Calculated from current volume ({Volume.ToString("#,##0,M", CultureInfo.InvariantCulture)}) divided by average volume last 90 days ({AvgVolume.ToString("#,##0,M", CultureInfo.InvariantCulture)})") >
+                                @Helper.TwoDecimal((Volume / AvgVolume) * 100)%
+                            </div>
+                        }
+                        
+
                     </div>
                 }
             </div>
