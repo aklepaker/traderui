@@ -333,7 +333,7 @@ namespace traderui.Server.IBKR
 
             _client.placeOrder(order.OrderId, webOrder.ContractDetails.Contract, order);
 
-            if (webOrder.TakeProfitAndUpdateSellorder)
+            if (webOrder.TakeProfitAndUpdateStoploss)
             {
                 var numberOfDecimals = webOrder.TakeProfitAt is > 0 and < 1 ? 4 : 2;
                 var numberOfOrdersToSell = Math.Ceiling(webOrder.Qty / 2);
