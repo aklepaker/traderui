@@ -192,6 +192,7 @@ namespace traderui.Server.IBKR
 
                     // Place the orders
                     _client.placeOrder(order.OrderId, contract, order);
+                    Log.Information("Modified {OrderType} on {Symbol} for {NumberOfOrders} at {Price}", order.OrderType, contract.Symbol, order.TotalQuantity, order.AuxPrice);
 
                     // Remove the orders from the modify dictionary
                     ContractOfOrdersToModify.Remove(orderId);
@@ -332,6 +333,7 @@ namespace traderui.Server.IBKR
             };
 
             _client.placeOrder(order.OrderId, webOrder.ContractDetails.Contract, order);
+            Log.Information("Placed {OrderType} buy order on {Symbol} for {NumberOfOrders} at {Price}", order.OrderType, webOrder.ContractDetails.Contract.Symbol, order.TotalQuantity, order.LmtPrice);
 
             if (webOrder.TakeProfitAndUpdateStoploss)
             {
@@ -355,6 +357,7 @@ namespace traderui.Server.IBKR
                 OrderToModify[order.OrderId] = profit;
 
                 _client.placeOrder(profit.OrderId, webOrder.ContractDetails.Contract, profit);
+                Log.Information(" | Placed {OrderType} partial profit order on {Symbol} for {NumberOfOrders} at {Price}", profit.OrderType, webOrder.ContractDetails.Contract.Symbol, profit.TotalQuantity, profit.LmtPrice);
 
                 _impl.NextOrderId++;
                 Order profitStopLoss = new Order
@@ -372,6 +375,7 @@ namespace traderui.Server.IBKR
                     Tif = "GTC" // Good til canceled
                 };
                 _client.placeOrder(profitStopLoss.OrderId, webOrder.ContractDetails.Contract, profitStopLoss);
+                Log.Information(" | - Placed {OrderType} partial stop order on {Symbol} for {NumberOfOrders} at {Price}", profitStopLoss.OrderType, webOrder.ContractDetails.Contract.Symbol, profitStopLoss.TotalQuantity, profitStopLoss.LmtPrice);
             }
 
             if (webOrder.Action == MarketAction.BUY)
@@ -396,6 +400,7 @@ namespace traderui.Server.IBKR
                     Tif = "GTC" // Good til canceled
                 };
                 _client.placeOrder(stopLoss.OrderId, webOrder.ContractDetails.Contract, stopLoss);
+                Log.Information("Placed {OrderType} on {Symbol} for {NumberOfOrders} at {Price}", stopLoss.OrderType, webOrder.ContractDetails.Contract.Symbol, stopLoss.TotalQuantity, stopLoss.AuxPrice);
             }
 
             _client.reqIds(-1); // Need to to this so we're up on the correct number on serverside.
