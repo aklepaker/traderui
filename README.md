@@ -15,7 +15,7 @@ Start the application by running the `traderui.exe` file from the build, or down
 ### Docker
 You may also run this with Docker, but be sure to set correct Server address (the IP of the machine running TWS) and ensure to update the tag of the image to correct version.
 
-`docker run -it --rm --name tradeui -p 5000:5000 -e "ServerOptions:Server=192.168.1.2" tradeui:0.2.1.22-5816236`
+`docker run -it --rm --name tradeui -p 5000:5000 -e "ServerOptions:Server=192.168.1.2" ghcr.io/aklepaker/traderui:0.2.1.22-5816236`
 
 Remember to update the TWS settings allowing for non-localhost addresses and add the IP of the docker host.
 
