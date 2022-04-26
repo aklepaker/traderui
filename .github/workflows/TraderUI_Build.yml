@@ -55,16 +55,16 @@ jobs:
           Start-Process msiexec.exe -Wait -ArgumentList "/x $env:TEMP\TWS_API.msi /quiet /qn"
           Remove-Item -Path $env:TEMP"\TWS_API.msi"
 
-      - name: Artifact binaries
+      - name: Upload repo with IBKR source
         uses: actions/upload-artifact@v2
         with:
           name: Repo_${{ steps.version.outputs.filever }}
           path: .
           retention-days: 1
           
-#      - name: Publish
-#        run: |
-#          dotnet publish .\Server\traderui.Server.csproj -c Release -r win-x64 --self-contained -o .\Publish
+      - name: Publish
+        run: |
+          dotnet publish .\Server\traderui.Server.csproj -c Release -r win-x64 --self-contained -o .\Publish
 
       - name: Upload Binaries
         uses: actions/upload-artifact@v2
@@ -92,5 +92,5 @@ jobs:
 
       - name: Docker Build and Push
         run: |
-          docker build . -f ./Dockerfile -t ghcr.io/aklepaker/traderui:${{ needs.build.outputs.version_tag }}
-          docker push ghcr.io/aklepaker/traderui:${{ needs.build.outputs.version_tag }}
+          docker build . -f ./Dockerfile -t ghcr.io/aklepaker/traderui:${{ needs.build.outputs.version_number }}
+          docker push ghcr.io/aklepaker/traderui:${{ needs.build.outputs.version_number }}
