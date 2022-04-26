@@ -12,21 +12,22 @@ using traderui.Server.IBKR;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var logConfiguration = builder.Configuration
+var configuration = builder.Configuration
     .SetBasePath(Environment.CurrentDirectory)
     .AddJsonFile("appsettings.json")
+    .AddEnvironmentVariables()
     .Build();
 
 builder.Host.UseSerilog((context, config) =>
 {
-    config.ReadFrom.Configuration(logConfiguration);
+    config.ReadFrom.Configuration(configuration);
 });
 
 Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(logConfiguration)
+    .ReadFrom.Configuration(configuration)
     .CreateLogger();
 
-builder.Services.Configure<ServerOptions>(builder.Configuration.GetSection(nameof(ServerOptions)));
+builder.Services.Configure<ServerOptions>(configuration.GetSection(nameof(ServerOptions)));
 builder.Services.AddMediatR(typeof(Program));
 builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddControllersWithViews();

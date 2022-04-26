@@ -4,11 +4,18 @@ on:
   push:
     tags:
       - '*'
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  Tests:
+  build:
     name: Release
     runs-on: windows-latest
+    outputs:
+      version_tag: ${{ steps.version.outputs.tag }}
+      version_number: ${{ steps.version.outputs.version }}
+      version_number_short: ${{ steps.version.outputs.filever }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -38,6 +45,7 @@ jobs:
           echo "::set-output name=version::${{ steps.minver.outputs.version }}"
           echo "::set-output name=semver::${{ steps.minver.outputs.major }}.${{ steps.minver.outputs.minor }}.${{ steps.minver.outputs.patch }}"
           echo "::set-output name=filever::${{ steps.minver.outputs.major }}.${{ steps.minver.outputs.minor }}.${{ steps.minver.outputs.patch }}.${{ github.run_number }}"
+          echo "::set-output name=tag::${{ steps.minver.outputs.major }}.${{ steps.minver.outputs.minor }}.${{ steps.minver.outputs.patch }}.${{ github.run_number }}-${{ steps.short-sha.outputs.sha }}"          
 
       - name: Download IBKR API
         run: |
@@ -47,13 +55,42 @@ jobs:
           Start-Process msiexec.exe -Wait -ArgumentList "/x $env:TEMP\TWS_API.msi /quiet /qn"
           Remove-Item -Path $env:TEMP"\TWS_API.msi"
 
-      - name: Publish
-        run: |
-          dotnet publish .\Server\traderui.Server.csproj -c Release -o .\Publish
+      - name: Artifact binaries
+        uses: actions/upload-artifact@v2
+        with:
+          name: Repo_${{ steps.version.outputs.filever }}
+          path: .
+          retention-days: 1
+          
+#      - name: Publish
+#        run: |
+#          dotnet publish .\Server\traderui.Server.csproj -c Release -r win-x64 --self-contained -o .\Publish
 
       - name: Upload Binaries
         uses: actions/upload-artifact@v2
         with:
-          name: traderui_${{ steps.version.outputs.version }}.zip
+          name: traderui_${{ steps.version.outputs.version }}
           path: .\Publish\**
           retention-days: 30
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Log in to the Container registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - uses: actions/download-artifact@v2
+        with:
+          name: Repo_${{  needs.build.outputs.version_number_short }}
+          path: .
+
+      - name: Docker Build and Push
+        run: |
+          docker build . -f ./Dockerfile -t ghcr.io/aklepaker/traderui:${{ needs.build.outputs.version_tag }}
+          docker push ghcr.io/aklepaker/traderui:${{ needs.build.outputs.version_tag }}

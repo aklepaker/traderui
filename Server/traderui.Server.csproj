@@ -6,11 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>traderui</AssemblyName>
   </PropertyGroup>
-    
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' AND '$(OS)' == 'Windows_NT' ">
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishReadyToRun>true</PublishReadyToRun>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <DebugType>embedded</DebugType>
