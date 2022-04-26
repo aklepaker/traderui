@@ -9,7 +9,18 @@ This software is provided as is and should be used at your own risk. For one rea
 This software could for whatever reason and at any point be archived or discontinued.
 
 ## Start
+### Windows
 Start the application by running the `traderui.exe` file from the build, or downloaded release. From your favorite browser open `http://localhost:5000`
+
+### Docker
+You may also run this with Docker, but be sure to set correct Server address (the IP of the machine running TWS) and ensure to update the tag of the image to correct version.
+
+`docker run -it --rm --name tradeui -p 5000:5000 -e "ServerOptions:Server=192.168.1.2" tradeui:0.2.1.22-5816236`
+
+Remember to update the TWS settings allowing for non-localhost addresses and add the IP of the docker host.
+
+![image](https://user-images.githubusercontent.com/27571840/165388593-da5d3c5d-2a8d-4cd1-b441-67e3ce16db41.png)
+
 
 ## TODOs
 
