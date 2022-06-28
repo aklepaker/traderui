@@ -5,6 +5,7 @@ namespace traderui.Shared
         MKT = 0,
         LMT,
         STP,
-        STPLMT
+        STPLMT,
+        MKT_CONDITIONAL
     }
 }

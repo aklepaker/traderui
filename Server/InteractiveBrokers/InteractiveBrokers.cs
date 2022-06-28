@@ -332,6 +332,18 @@ namespace traderui.Server.IBKR
                 // }
             };
 
+            if (webOrder.OrderType == OrderType.MKT_CONDITIONAL)
+            {
+                order.OrderType = OrderType.MKT.ToString();
+
+                PriceCondition priceCondition = (PriceCondition)OrderCondition.Create(OrderConditionType.Price);
+                priceCondition.ConId = webOrder.ContractDetails.Contract.ConId;
+                priceCondition.Exchange = webOrder.ContractDetails.Contract.Exchange;
+                priceCondition.IsMore = true;
+                priceCondition.Price = Math.Round(webOrder.LmtPrice, 2, MidpointRounding.AwayFromZero);
+                order.Conditions.Add(priceCondition);
+            }
+
             _client.placeOrder(order.OrderId, webOrder.ContractDetails.Contract, order);
             Log.Information("Placed {OrderType} buy order on {Symbol} for {NumberOfOrders} at {Price}", order.OrderType, webOrder.ContractDetails.Contract.Symbol, order.TotalQuantity, order.LmtPrice);
 
