@@ -354,7 +354,8 @@ TODO: This file should be split into smaller components.
                 Max loss $
             </dt>
             <dd class="mt-1 text-sm text-gray-900 mt-0" >
-                <AntDesign.InputNumber name="MaxLoss" DefaultValue="@MaxLossInDollar" ValueChanged=@((double v) => OnMaxLossChange(v)) style="width: 75px" Max="100" Min="0" />
+                <AntDesign.InputNumber Formatter="FormatAsDollar" Parser="ParseDollar"  name="MaxLossDollar" Value="@MaxLossInDollar" ValueChanged=@((double v) => OnMaxLossDollarChange(v)) style="width: 75px" Max="100" Min="0" />
+                <AntDesign.InputNumber Formatter="FormatAsPercentage" Parser="ParsePercent" name="MaxLossInPercent" Value="@MaxLossInPercent" ValueChanged=@((double v) => OnMaxLossPercentChange(v)) style="width: 75px" Max="100" Min="0" Step="0.1" />
             </dd>
             <dt class="text-xs font-medium text-gray-500" >
                 Max position size is @PositionSize% (@(Helper.CurrencyFormat(PositionSize / 100 * AccountSize)))

@@ -1,6 +1,7 @@
 ﻿using AntDesign;
 using IBApi;
 using Microsoft.AspNetCore.SignalR.Client;
+using System.Text.RegularExpressions;
 using traderui.Client.Models;
 using traderui.Shared;
 using traderui.Shared.Events;
@@ -52,6 +53,7 @@ namespace traderui.Client.Pages
         public List<Position> Positions { get; set; } = new List<Position>();
 
         public double MaxLossInDollar { get; set; } = 0;
+        public double MaxLossInPercent { get; set; } = 0;
 
         public double DailyPnL { get; set; }
         public double UnrealizedPnL { get; set; }
@@ -154,6 +156,7 @@ namespace traderui.Client.Pages
             ContractDetails = new ContractDetails();
             Symbol = "";
             MaxLossInDollar = await localStorage.GetItemAsync<double>("maxLossInDollar");
+            MaxLossInPercent = await localStorage.GetItemAsync<double>("maxLossInPercent");
             RiskRatioTarget = await localStorage.GetItemAsync<double>("riskRatioTarget");
             HideTakeProfitAndUpdateStoplossWarning = await localStorage.GetItemAsync<bool>("hideTakeProfitAndUpdateStoplossWarning");
             TakeProfitAndUpdateStoploss = await localStorage.GetItemAsync<bool>("takeProfitAndUpdateStoploss");
@@ -431,6 +434,7 @@ namespace traderui.Client.Pages
         {
             AccountSize = v;
             Size = Price > 0 ? AccountSize / Price : 0;
+            OnMaxLossPercentChange(MaxLossInPercent);
         }
 
         public void RecalculateNumbers()
@@ -656,9 +660,20 @@ namespace traderui.Client.Pages
             OverridePrice = value;
         }
 
-        private async void OnMaxLossChange(double d)
+        private async void OnMaxLossDollarChange(double d)
         {
             MaxLossInDollar = d;
+            MaxLossInPercent = (MaxLossInDollar / AccountSize) * 100;
+            await localStorage.SetItemAsync("maxLossInPercent", MaxLossInPercent);
+            await localStorage.SetItemAsync("maxLossInDollar", MaxLossInDollar);
+            RecalculateNumbers();
+        }
+
+        private async void OnMaxLossPercentChange(double d)
+        {
+            MaxLossInPercent = d;
+            MaxLossInDollar = Math.Round(((AccountSize / 100) * d), MidpointRounding.ToZero);
+            await localStorage.SetItemAsync("maxLossInPercent", MaxLossInPercent);
             await localStorage.SetItemAsync("maxLossInDollar", MaxLossInDollar);
             RecalculateNumbers();
         }
@@ -695,5 +710,26 @@ namespace traderui.Client.Pages
             OverrideTakeProfitAt = 0;
             StateHasChanged();
         }
+
+        private string FormatAsDollar(double value)
+        {
+            return "$ " + value.ToString("n0");
+        }
+
+        private string ParseDollar(string value)
+        {
+            return Regex.Replace(value, @"\$\s?|(,*)", "");
+        }
+
+        private string FormatAsPercentage(double value)
+        {
+            return value.ToString() + "%";
+        }
+
+        private string ParsePercent(string value)
+        {
+            return value.Replace("%", "");
+        }
+
     }
 }
