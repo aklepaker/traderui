@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - '*'
+      - "*"
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
@@ -45,7 +45,7 @@ jobs:
           echo "::set-output name=version::${{ steps.minver.outputs.version }}"
           echo "::set-output name=semver::${{ steps.minver.outputs.major }}.${{ steps.minver.outputs.minor }}.${{ steps.minver.outputs.patch }}"
           echo "::set-output name=filever::${{ steps.minver.outputs.major }}.${{ steps.minver.outputs.minor }}.${{ steps.minver.outputs.patch }}.${{ github.run_number }}"
-          echo "::set-output name=tag::${{ steps.minver.outputs.major }}.${{ steps.minver.outputs.minor }}.${{ steps.minver.outputs.patch }}.${{ github.run_number }}-${{ steps.short-sha.outputs.sha }}"          
+          echo "::set-output name=tag::${{ steps.minver.outputs.major }}.${{ steps.minver.outputs.minor }}.${{ steps.minver.outputs.patch }}.${{ github.run_number }}-${{ steps.short-sha.outputs.sha }}"
 
       - name: Download IBKR API
         run: |
@@ -61,7 +61,7 @@ jobs:
           name: Repo_${{ steps.version.outputs.filever }}
           path: .
           retention-days: 1
-          
+
       - name: Publish
         run: |
           dotnet publish .\Server\traderui.Server.csproj -c Release -r win-x64 --self-contained -o .\Publish
@@ -84,7 +84,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - uses: actions/download-artifact@v2
         with:
           name: Repo_${{  needs.build.outputs.version_number_short }}
@@ -92,5 +92,5 @@ jobs:
 
       - name: Docker Build and Push
         run: |
-          docker build . -f ./Dockerfile -t ghcr.io/aklepaker/traderui:${{ needs.build.outputs.version_number }}
-          docker push ghcr.io/aklepaker/traderui:${{ needs.build.outputs.version_number }}
+          docker build . -f ./Dockerfile -t ghcr.io/aklepaker/traderui:${{ needs.build.outputs.version_tag }}
+          docker push ghcr.io/aklepaker/traderui:${{ needs.build.outputs.version_tag }}
