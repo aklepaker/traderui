@@ -6,5 +6,6 @@ namespace traderui.Server.Controllers
     {
         public string Symbol { get; set; }
         public int RequestId { get; set; }
+        public string ConnectionId { get; set; }
     }
 }
