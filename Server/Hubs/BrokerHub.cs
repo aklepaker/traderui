@@ -10,10 +10,12 @@ namespace traderui.Server.Hubs;
 public class BrokerHub : Hub
 {
     private IInteractiveBrokers _broker;
+    private readonly BrokerHubService _brokerHubService;
 
-    public BrokerHub(IInteractiveBrokers broker)
+    public BrokerHub(IInteractiveBrokers broker, BrokerHubService brokerHubService)
     {
         _broker = broker;
+        _brokerHubService = brokerHubService;
     }
 
     public override Task OnConnectedAsync()
@@ -21,11 +23,11 @@ public class BrokerHub : Hub
         if (!_broker.IsConnected())
         {
             _broker.Connect();
-            Clients.All.SendAsync(nameof(TWSDisconnectedMessage), new TWSDisconnectedMessage());
+            Clients.Client(Context.ConnectionId).SendAsync(nameof(TWSDisconnectedMessage), new TWSDisconnectedMessage());
         }
         else
         {
-            Clients.All.SendAsync(nameof(TWSConnectedMessage), new TWSConnectedMessage
+            Clients.Client(Context.ConnectionId).SendAsync(nameof(TWSConnectedMessage), new TWSConnectedMessage
             {
                 Version = FileVersionInfo.GetVersionInfo(Process.GetCurrentProcess().MainModule.FileName).ProductVersion
             });
@@ -36,7 +38,8 @@ public class BrokerHub : Hub
 
     public override Task OnDisconnectedAsync(Exception exception)
     {
-        _broker.CancelSubscriptions();
+         // _broker.CancelSubscriptions();
+        _brokerHubService.RemoveFromGroup(Context.ConnectionId);
         return base.OnDisconnectedAsync(exception);
     }
 

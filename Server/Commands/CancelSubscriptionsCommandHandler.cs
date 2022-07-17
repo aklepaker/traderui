@@ -16,7 +16,7 @@ namespace traderui.Server.Commands
 
         public Task<Unit> Handle(CancelSubscriptionsCommand request, CancellationToken cancellationToken)
         {
-            _broker.CancelSubscriptions();
+            // _broker.CancelSubscriptions();
             return Task.FromResult(new Unit());
         }
     }

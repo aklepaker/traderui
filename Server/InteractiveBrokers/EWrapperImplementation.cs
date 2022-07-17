@@ -78,7 +78,7 @@ public class EWrapperImplementation : EWrapper
 
     public void tickPrice(int tickerId, int field, double price, TickAttrib attribs)
     {
-        _brokerHub.Clients.All.SendAsync(nameof(TickPriceMessage), new TickPriceMessage
+        _brokerHub.Clients.Group(_broker.GetSymbolNameFromRequestId(tickerId)).SendAsync(nameof(TickPriceMessage), new TickPriceMessage
         {
             TickerId = tickerId,
             Field = field,
@@ -89,7 +89,7 @@ public class EWrapperImplementation : EWrapper
 
     public void tickSize(int tickerId, int field, int size)
     {
-        _brokerHub.Clients.All.SendAsync(nameof(TickSizeMessage), new TickSizeMessage
+        _brokerHub.Clients.Group(_broker.GetSymbolNameFromRequestId(tickerId)).SendAsync(nameof(TickSizeMessage), new TickSizeMessage
         {
             TickerId = tickerId,
             Field = field,
@@ -103,7 +103,7 @@ public class EWrapperImplementation : EWrapper
 
     public void tickGeneric(int tickerId, int field, double value)
     {
-        _brokerHub.Clients.All.SendAsync(nameof(TickGenericMessage), new TickGenericMessage
+        _brokerHub.Clients.Group(_broker.GetSymbolNameFromRequestId(tickerId)).SendAsync(nameof(TickGenericMessage), new TickGenericMessage
         {
             TickerId = tickerId,
             Field = field,
@@ -218,7 +218,7 @@ public class EWrapperImplementation : EWrapper
 
     public void contractDetails(int reqId, ContractDetails contractDetails)
     {
-        _brokerHub.Clients.All.SendAsync(nameof(ContractDetailsMessage), new ContractDetailsMessage {RequestId = reqId, ContractDetails = contractDetails});
+        _brokerHub.Clients.Group(contractDetails.Contract.Symbol).SendAsync(nameof(ContractDetailsMessage), new ContractDetailsMessage {RequestId = reqId, ContractDetails = contractDetails});
     }
 
     public void contractDetailsEnd(int reqId)
@@ -243,17 +243,18 @@ public class EWrapperImplementation : EWrapper
 
     public void historicalData(int reqId, Bar bar)
     {
-        _brokerHub.Clients.All.SendAsync(nameof(HistoricalDataMessage), new HistoricalDataMessage {RequestId = reqId, Bar = bar,});
+        _brokerHub.Clients.Group(_broker.GetSymbolNameFromRequestId(reqId)).SendAsync(nameof(HistoricalDataMessage), new HistoricalDataMessage {RequestId = reqId, Bar = bar,});
+        // _brokerHub.Clients.All.SendAsync(nameof(HistoricalDataMessage), new HistoricalDataMessage {RequestId = reqId, Bar = bar,});
     }
 
     public void historicalDataUpdate(int reqId, Bar bar)
     {
-        _brokerHub.Clients.All.SendAsync(nameof(HistoricalDataUpdateMessage), new HistoricalDataUpdateMessage {RequestId = reqId, Bar = bar,});
+        _brokerHub.Clients.Group(_broker.GetSymbolNameFromRequestId(reqId)).SendAsync(nameof(HistoricalDataUpdateMessage), new HistoricalDataUpdateMessage {RequestId = reqId, Bar = bar,});
     }
 
     public void historicalDataEnd(int reqId, string start, string end)
     {
-        _brokerHub.Clients.All.SendAsync(nameof(HistoricalDataEndMessage), new HistoricalDataEndMessage {RequestId = reqId, Start = start, End = end,});
+        _brokerHub.Clients.Group(_broker.GetSymbolNameFromRequestId(reqId)).SendAsync(nameof(HistoricalDataEndMessage), new HistoricalDataEndMessage {RequestId = reqId, Start = start, End = end,});
     }
 
     public void marketDataType(int reqId, int marketDataType)
@@ -467,7 +468,7 @@ public class EWrapperImplementation : EWrapper
 
     public void tickByTickBidAsk(int reqId, long time, double bidPrice, double askPrice, int bidSize, int askSize, TickAttribBidAsk tickAttribBidAsk)
     {
-        _brokerHub.Clients.All.SendAsync(nameof(TickByTickBidAskMessage), new TickByTickBidAskMessage
+        _brokerHub.Clients.Group(_broker.GetSymbolNameFromRequestId(reqId)).SendAsync(nameof(TickByTickBidAskMessage), new TickByTickBidAskMessage
         {
             RequestId = reqId,
             Time = time,

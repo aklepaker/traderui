@@ -34,6 +34,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IInteractiveBrokers, InteractiveBrokers>();
+builder.Services.AddSingleton<BrokerHubService>();
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.SuppressModelStateInvalidFilter = true;
