@@ -31,43 +31,49 @@ namespace traderui.Server.Controllers
             _mapper = mapper;
         }
 
-        [HttpGet("ticker/{symbol}")]
-        public IActionResult Get(string symbol)
+        [HttpGet("ticker/{symbol}/{connectionId}")]
+        public IActionResult Get(string symbol, string connectionId)
         {
             _mediator.Send(new GetTickerCommand
             {
                 Symbol = symbol,
+                ConnectionId = connectionId
             });
 
             return Ok();
         }
 
-        [HttpGet("ticker/{symbol}/price")]
-        public IActionResult UpdatePrice(string symbol)
+        [HttpGet("ticker/{symbol}/price/{connectionId}")]
+        public IActionResult UpdatePrice(string symbol,string connectionId)
         {
             _mediator.Send(new GetTickerPriceCommand
             {
                 Symbol = symbol,
+                ConnectionId = connectionId
+
             });
             return Ok();
         }
 
         [HttpGet("ticker/{symbol}/historic")]
-        public IActionResult GetHistoricData(string symbol)
+        public IActionResult GetHistoricData(string symbol,string connectionId)
         {
             _mediator.Send(new GetHistoricDataCommand
             {
                 Symbol = symbol,
+                ConnectionId = connectionId
             });
             return Ok();
         }
 
-        [HttpGet("ticker/{symbol}/historicbardata/{requestId}")]
-        public IActionResult GetHistoricalBarData(string symbol, int requestId)
+        [HttpGet("ticker/{symbol}/historicbardata/{requestId}/{connectionId}")]
+        public IActionResult GetHistoricalBarData(string symbol, int requestId, string connectionId)
         {
             _mediator.Send(new GetHistoricalBarDataCommand
             {
-                Symbol = symbol, RequestId = requestId,
+                Symbol = symbol,
+                ConnectionId = connectionId,
+                RequestId = requestId,
             });
             return Ok();
         }
