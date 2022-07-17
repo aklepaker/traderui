@@ -2,6 +2,7 @@ using IBApi;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using Serilog;
+using System.ComponentModel.DataAnnotations;
 using traderui.Server.Hubs;
 using traderui.Shared;
 using traderui.Shared.Events;
@@ -22,6 +23,8 @@ namespace traderui.Server.IBKR
         private int _marketDataType { get; set; }
         private Dictionary<string, int> CurrentRequestStack { get; set; } = new Dictionary<string, int>();
         private Dictionary<string, int> GetPriceRequestStack { get; set; } = new Dictionary<string, int>();
+
+        private Dictionary<int, string> RequestIdToSymbol { get; set; } = new Dictionary<int, string>();
 
         private Dictionary<int, Order> OrderToModify { get; set; } = new();
         private Dictionary<int, Contract> ContractOfOrdersToModify { get; set; } = new();
@@ -210,6 +213,12 @@ namespace traderui.Server.IBKR
             }
         }
 
+        public string GetSymbolNameFromRequestId(int requestId)
+        {
+            // Log.Information("Symbol for {requestId} = {symbol}", requestId, RequestIdToSymbol[requestId]);
+            return RequestIdToSymbol[requestId];
+        }
+
         public void GetTickerPnL(string account, int conId, bool active)
         {
             try
@@ -240,6 +249,12 @@ namespace traderui.Server.IBKR
             GetPriceRequestStack.Clear();
         }
 
+        public void CancelSubscriptions(int requestId)
+        {
+            _client.cancelMktData(requestId);
+            _client.cancelHistoricalData(requestId);
+        }
+
         public void GetHistoricPrice(string name)
         {
             Contract contract = new Contract
@@ -252,8 +267,10 @@ namespace traderui.Server.IBKR
                 Exchange = "SMART"
             };
 
+            var requestId = _random.Next();
+            RequestIdToSymbol.Add(requestId, name);
             String queryTime = $"{DateTime.Now.ToString("yyyyMMdd")} 23:59:59";
-            _client.reqHistoricalData(_random.Next(), contract, String.Empty, "1 D", "1 day", "TRADES", 1, 1, true, null);
+            _client.reqHistoricalData(requestId, contract, String.Empty, "1 D", "1 day", "TRADES", 1, 1, true, null);
         }
 
         public void GetTicker(string name)
@@ -268,6 +285,22 @@ namespace traderui.Server.IBKR
                 Exchange = "SMART"
             };
             var newRequestId = _random.Next();
+
+            if (RequestIdToSymbol.ContainsValue(name))
+            {
+                foreach (var kv in RequestIdToSymbol)
+                {
+                    if (kv.Value == name)
+                    {
+                        newRequestId = kv.Key;
+                    }
+                }
+            }
+            else
+            {
+                RequestIdToSymbol.Add(newRequestId, name);
+            }
+
             _client.reqIds(-1);
             _client.reqContractDetails(newRequestId, contract);
         }
@@ -277,7 +310,7 @@ namespace traderui.Server.IBKR
             _client.reqMarketDataType(_marketDataType);
             var requestId = _random.Next();
 
-            CancelSubscriptions();
+            // CancelSubscriptions();
 
             Contract contract = new Contract
             {
@@ -289,7 +322,15 @@ namespace traderui.Server.IBKR
                 Exchange = "SMART"
             };
 
-            GetPriceRequestStack.Add(name, requestId);
+            if (!GetPriceRequestStack.ContainsKey(name))
+            {
+                GetPriceRequestStack.Add(name, requestId);
+            }
+
+            if (!RequestIdToSymbol.ContainsKey(requestId))
+            {
+                RequestIdToSymbol.Add(requestId, name);
+            }
 
             Log.Information("Requested market data for {name}", name);
             _client.reqMktData(requestId, contract, "165, 221,233,295,595", false, false, null);
@@ -308,6 +349,11 @@ namespace traderui.Server.IBKR
                 Exchange = "SMART"
             };
             // String queryTime = DateTime.Now.AddMonths(-1).ToString("yyyyMMdd HH:mm:ss");
+            if (!RequestIdToSymbol.ContainsKey(requestId))
+            {
+                RequestIdToSymbol.Add(requestId, name);
+            }
+
             _client.reqHistoricalData(requestId, contract, String.Empty, "20 D", "1 day", "TRADES", 1, 1, false, null);
         }
 
