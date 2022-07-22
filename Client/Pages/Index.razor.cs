@@ -234,13 +234,15 @@ namespace traderui.Client.Pages
                 StateHasChanged();
             });
 
-            Connection.On(nameof(ErrorCodeMessage), async (ErrorCodeMessage errorCodeEvent) =>
+            Connection.On(nameof(ErrorCodeMessage), (ErrorCodeMessage errorCodeEvent) =>
             {
                 switch (errorCodeEvent.ErrorCode)
                 {
                     case 200:
-                        ResetForm(false);
-                        await tickerInput.Focus(FocusBehavior.FocusAndClear);
+                        // ResetForm(false);
+                        // await _message.Info(errorCodeEvent.ErrorMessage);
+                        AddLogMessage(errorCodeEvent.ErrorMessage);
+                        // await tickerInput.Focus(FocusBehavior.FocusAndClear);
                         break;
                 }
 
