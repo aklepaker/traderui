@@ -383,7 +383,7 @@ namespace traderui.Server.IBKR
                     TotalQuantity = webOrder.Qty - numberOfOrdersToSell,
                     AuxPrice = Math.Round(webOrder.Price, numberOfDecimals, MidpointRounding.ToZero),
                     LmtPrice = Math.Round(webOrder.Price, numberOfDecimals, MidpointRounding.ToZero),
-                    Transmit = webOrder.Transmit,
+                    Transmit = false,
                     Tif = "GTC" // Good til canceled
                 };
                 _client.placeOrder(profitStopLoss.OrderId, webOrder.ContractDetails.Contract, profitStopLoss);
