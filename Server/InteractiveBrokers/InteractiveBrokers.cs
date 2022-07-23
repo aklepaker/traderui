@@ -19,6 +19,7 @@ namespace traderui.Server.IBKR
         private Random _random = new Random();
         private readonly ServerOptions _serverOptions;
         private CancellationTokenSource _connectionToken;
+        private int _marketDataType { get; set; }
         private Dictionary<string, int> CurrentRequestStack { get; set; } = new Dictionary<string, int>();
         private Dictionary<string, int> GetPriceRequestStack { get; set; } = new Dictionary<string, int>();
 
@@ -37,6 +38,14 @@ namespace traderui.Server.IBKR
             _brokerHub = brokerHub;
             _impl = new EWrapperImplementation(_brokerHub, this);
             _client = _impl.ClientSocket;
+
+            /*
+                1 (real-time) disables frozen, delayed and delayed-frozen market data
+                3 (delayed) enables delayed and disables delayed-frozen market data
+            */
+            Log.Information("Realtime Market Datata is {Status}", _serverOptions.UseRealtimeMarketData ? "enabled" : "disabled");
+            _marketDataType = _serverOptions.UseRealtimeMarketData ? 1 : 3;
+
             Connect();
         }
 
@@ -265,7 +274,7 @@ namespace traderui.Server.IBKR
 
         public void GetTickerPrice(string name)
         {
-            _client.reqMarketDataType(1);
+            _client.reqMarketDataType(_marketDataType);
             var requestId = _random.Next();
 
             CancelSubscriptions();
