@@ -14,4 +14,12 @@ public class ServerOptions
     /// The client ID used when connecting to TWS
     /// </summary>
     public int ClientId { get; set; }
+
+    /// <summary>
+    /// Use realtime market data on request
+    /// </summary>
+    /// <remarks>
+    /// Default true
+    /// </remarks>
+    public bool UseRealtimeMarketData { get; set; } = true;
 }
