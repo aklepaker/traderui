@@ -7,6 +7,7 @@ namespace traderui.Client.Services;
 public class BrokerService : IBrokerService
 {
     private readonly HttpClient _httpClient;
+    private string _connectionId;
 
     public BrokerService(HttpClient httpClient)
     {
@@ -15,17 +16,17 @@ public class BrokerService : IBrokerService
 
     public async Task GetTicker(string name, CancellationToken cancellationToken)
     {
-        await _httpClient.GetAsync($"api/broker/ticker/{name}", cancellationToken);
+        await _httpClient.GetAsync($"api/broker/ticker/{name}/{_connectionId}", cancellationToken);
     }
 
     public async Task GetTickerPrice(string name, CancellationToken cancellationToken)
     {
-        await _httpClient.GetAsync($"api/broker/ticker/{name}/price", cancellationToken);
+        await _httpClient.GetAsync($"api/broker/ticker/{name}/price/{_connectionId}", cancellationToken);
     }
 
     public async Task GetHistoricalBarData(string name, int requestId, CancellationToken cancellationToken)
     {
-        await _httpClient.GetAsync($"api/broker/ticker/{name}/historicbardata/{requestId}", cancellationToken);
+        await _httpClient.GetAsync($"api/broker/ticker/{name}/historicbardata/{requestId}/{_connectionId}", cancellationToken);
     }
 
     public async Task BuyOrder(string name, PlaceOrderRequest orderRequest, CancellationToken cancellationToken)
@@ -63,5 +64,10 @@ public class BrokerService : IBrokerService
     public async Task CancelSubscriptions(CancellationToken cancellationToken)
     {
         await _httpClient.GetAsync($"api/broker/cancelSubscriptions", cancellationToken);
+    }
+
+    public void SetConnectionId(string connectionId)
+    {
+        _connectionId = connectionId;
     }
 }

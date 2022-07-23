@@ -18,5 +18,6 @@ namespace traderui.Server.IBKR
         bool IsConnected();
         void ModifyProfitOrderWithCorrectQuantity(int orderId, double filled);
         void Connect();
+        string GetSymbolNameFromRequestId(int reqId);
     }
 }

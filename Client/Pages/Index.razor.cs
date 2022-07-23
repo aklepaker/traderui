@@ -29,7 +29,7 @@ namespace traderui.Client.Pages
 
         public DateTime DateTimeUpdated { get; set; }
         public string Symbol { get; set; }
-        public string TempSymbol { get; set; }
+        public string TempSymbol { get; set; } = String.Empty;
         public bool SymbolLoaded { get; set; }
         public bool PriceLoaded { get; set; }
         public ContractDetails ContractDetails { get; set; }
@@ -150,6 +150,7 @@ namespace traderui.Client.Pages
 
         public double OverrideTakeProfitAtPercent { get; set; } = 0;
 
+        public HubConnection Connection { get; set; }
         protected override async void OnInitialized()
         {
             AdrBarDataRequest = _randomNumberGenerator.Next();
@@ -176,41 +177,43 @@ namespace traderui.Client.Pages
 
             TempSymbol = await localStorage.GetItemAsync<string>("symbol");
 
-            HubConnection connection = new HubConnectionBuilder()
+            Connection = new HubConnectionBuilder()
                 .WithUrl(new Uri($"{NavigationManager.Uri}hub/broker"))
                 .WithAutomaticReconnect()
                 .Build();
 
-            connection.Closed += (e) =>
+            Connection.Closed += (e) =>
+            {
+                // await BrokerService.CancelSubscriptions(CancellationToken.None);
+                IsConnectedToTws = false;
+                StateHasChanged();
+                return null;
+            };
+
+            Connection.Reconnecting += (e) =>
             {
                 IsConnectedToTws = false;
                 StateHasChanged();
                 return null;
             };
 
-            connection.Reconnecting += (e) =>
+            Connection.Reconnected += async (connectionId) =>
             {
-                IsConnectedToTws = false;
-                StateHasChanged();
-                return null;
-            };
-
-            connection.Reconnected += async (connectionId) =>
-            {
-                await BrokerService.CancelSubscriptions(CancellationToken.None);
+                // await BrokerService.CancelSubscriptions(CancellationToken.None);
                 await BrokerService.GetPositions(CancellationToken.None);
                 await BrokerService.GetAccountSummary(false, CancellationToken.None);
+                BrokerService.SetConnectionId(Connection.ConnectionId);
                 IsConnectedToTws = true;
                 StateHasChanged();
             };
 
-            connection.On(nameof(TWSDisconnectedMessage), (TWSDisconnectedMessage message) =>
+            Connection.On(nameof(TWSDisconnectedMessage), (TWSDisconnectedMessage message) =>
             {
                 IsConnectedToTws = false;
                 StateHasChanged();
             });
 
-            connection.On(nameof(TWSConnectedMessage), (TWSConnectedMessage message) =>
+            Connection.On(nameof(TWSConnectedMessage), (TWSConnectedMessage message) =>
             {
                 IsConnectedToTws = true;
                 ApplicationVersion = message.Version;
@@ -218,7 +221,7 @@ namespace traderui.Client.Pages
                 StateHasChanged();
             });
 
-            connection.On(nameof(ContractDetailsMessage), async (ContractDetailsMessage contractDetailsEvent) =>
+            Connection.On(nameof(ContractDetailsMessage), async (ContractDetailsMessage contractDetailsEvent) =>
             {
                 AdrData.Clear();
                 ContractDetails = contractDetailsEvent.ContractDetails;
@@ -231,25 +234,27 @@ namespace traderui.Client.Pages
                 StateHasChanged();
             });
 
-            connection.On(nameof(ErrorCodeMessage), async (ErrorCodeMessage errorCodeEvent) =>
+            Connection.On(nameof(ErrorCodeMessage), (ErrorCodeMessage errorCodeEvent) =>
             {
                 switch (errorCodeEvent.ErrorCode)
                 {
                     case 200:
-                        ResetForm(false);
-                        await tickerInput.Focus(FocusBehavior.FocusAndClear);
+                        // ResetForm(false);
+                        // await _message.Info(errorCodeEvent.ErrorMessage);
+                        AddLogMessage(errorCodeEvent.ErrorMessage);
+                        // await tickerInput.Focus(FocusBehavior.FocusAndClear);
                         break;
                 }
 
                 StateHasChanged();
             });
 
-            connection.On(nameof(ConnectAckMessage), (ConnectAckMessage connectAckEvent) =>
+            Connection.On(nameof(ConnectAckMessage), (ConnectAckMessage connectAckEvent) =>
             {
                 AddLogMessage(connectAckEvent.Message);
             });
 
-            connection.On(nameof(PositionMessage), async (PositionMessage positionEvent) =>
+            Connection.On(nameof(PositionMessage), async (PositionMessage positionEvent) =>
             {
                 Position position = new Position
                 {
@@ -271,13 +276,13 @@ namespace traderui.Client.Pages
                 StateHasChanged();
             });
 
-            connection.On(nameof(HistoricalDataUpdateMessage), (HistoricalDataUpdateMessage historicalDataUpdateEvent) =>
+            Connection.On(nameof(HistoricalDataUpdateMessage), (HistoricalDataUpdateMessage historicalDataUpdateEvent) =>
             {
                 HighOfDay = historicalDataUpdateEvent.Bar.High;
                 LowOfDay = historicalDataUpdateEvent.Bar.Low;
             });
 
-            connection.On(nameof(HistoricalDataMessage), (HistoricalDataMessage historicalDataEvent) =>
+            Connection.On(nameof(HistoricalDataMessage), (HistoricalDataMessage historicalDataEvent) =>
             {
                 if (historicalDataEvent.RequestId.Equals(AdrBarDataRequest))
                 {
@@ -285,15 +290,16 @@ namespace traderui.Client.Pages
                 }
             });
 
-            connection.On(nameof(HistoricalDataEndMessage), (HistoricalDataEndMessage historicalDataEndEvent) =>
+            Connection.On(nameof(HistoricalDataEndMessage), (HistoricalDataEndMessage historicalDataEndEvent) =>
             {
                 if (historicalDataEndEvent.RequestId == AdrBarDataRequest)
                 {
                     AdrData.CalculateDailyRange();
+                    StateHasChanged();
                 }
             });
 
-            connection.On(nameof(PnlMessage), (PnlMessage pnlEvent) =>
+            Connection.On(nameof(PnlMessage), (PnlMessage pnlEvent) =>
             {
                 DailyPnL = pnlEvent.DailyPnl;
                 RealizedPnL = pnlEvent.RealizedPnl;
@@ -301,7 +307,7 @@ namespace traderui.Client.Pages
                 StateHasChanged();
             });
 
-            connection.On(nameof(PnlSingleMessage), (PnlSingleMessage pnlSingleEvent) =>
+            Connection.On(nameof(PnlSingleMessage), (PnlSingleMessage pnlSingleEvent) =>
             {
                 var ix = Positions.FindIndex(c => c.PositionId == pnlSingleEvent.RequestId);
                 var position = Positions[ix];
@@ -312,7 +318,7 @@ namespace traderui.Client.Pages
                 StateHasChanged();
             });
 
-            connection.On(nameof(AccountSummaryMessage), (AccountSummaryMessage accountSummaryEvent) =>
+            Connection.On(nameof(AccountSummaryMessage), (AccountSummaryMessage accountSummaryEvent) =>
             {
                 switch (accountSummaryEvent.Tag)
                 {
@@ -332,16 +338,16 @@ namespace traderui.Client.Pages
                 StateHasChanged();
             });
 
-            connection.On(nameof(OpenOrderMessage), (OpenOrderMessage openOrderEvent) =>
+            Connection.On(nameof(OpenOrderMessage), (OpenOrderMessage openOrderEvent) =>
             {
                 Console.WriteLine(openOrderEvent.OrderState.Status);
             });
 
-            connection.On(nameof(OrderStatusMessage), (OrderStatusMessage orderStatusEvent) =>
+            Connection.On(nameof(OrderStatusMessage), (OrderStatusMessage orderStatusEvent) =>
             {
             });
 
-            connection.On(nameof(TickPriceMessage), (TickPriceMessage tickPriceEvent) =>
+            Connection.On(nameof(TickPriceMessage), (TickPriceMessage tickPriceEvent) =>
             {
                 /*
                  See this matrix for details for TickId and TickName
@@ -379,7 +385,7 @@ namespace traderui.Client.Pages
                 }
             });
 
-            connection.On(nameof(TickSizeMessage), (TickSizeMessage tickSizeMessage) =>
+            Connection.On(nameof(TickSizeMessage), (TickSizeMessage tickSizeMessage) =>
             {
                 switch (tickSizeMessage.Field)
                 {
@@ -392,25 +398,26 @@ namespace traderui.Client.Pages
                 }
             });
 
-            connection.On(nameof(TickGenericMessage), (TickGenericMessage tickGenericMessage) =>
+            Connection.On(nameof(TickGenericMessage), (TickGenericMessage tickGenericMessage) =>
             {
             });
 
-            connection.On(nameof(TickByTickBidAskMessage), (TickByTickBidAskMessage tickByTickBidAskEvent) =>
+            Connection.On(nameof(TickByTickBidAskMessage), (TickByTickBidAskMessage tickByTickBidAskEvent) =>
             {
                 AskPrice = tickByTickBidAskEvent.AskPrice;
                 BidPrice = tickByTickBidAskEvent.BidPrice;
                 RecalculateNumbers();
             });
 
-            connection.On<string>("log", (obj) =>
+            Connection.On<string>("log", (obj) =>
             {
                 AddLogMessage(obj);
                 StateHasChanged();
             });
 
             // Initialize SignalR connection
-            await connection.StartAsync();
+            await Connection.StartAsync();
+            BrokerService.SetConnectionId(Connection.ConnectionId);
 
             // Request basic account details
             await BrokerService.GetAccountSummary(false, CancellationToken.None);
@@ -425,6 +432,7 @@ namespace traderui.Client.Pages
         public async void OnSymbolChange()
         {
             AdrData.Clear();
+            TempSymbol = TempSymbol?.ToUpper();
             Symbol = TempSymbol;
             await BrokerService.GetTicker(Symbol, CancellationToken.None);
             StateHasChanged();
@@ -557,7 +565,7 @@ namespace traderui.Client.Pages
             OverrideStopLoss = 0;
             OverrideTakeProfitAt = 0;
             OverrideTakeProfitAtPercent = 0;
-
+            OnSymbolChange();
             BrokerService.GetTickerPrice(Symbol, CancellationToken.None);
         }
 
