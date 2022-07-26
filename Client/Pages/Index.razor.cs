@@ -462,7 +462,30 @@ namespace traderui.Client.Pages
             }
             else
             {
-                StopLossAt = Math.Round(Price - (Price * (1 - (100 - Risk) / 100)), 2, MidpointRounding.AwayFromZero);
+                /*
+                 When calucating the stop based on a percentage we will probably
+                 not hit an even amount on the size. So we need to ensure we are
+                 not overshooting the requested risk size.
+                */
+
+                var _risk = Risk;
+
+                /*
+                 Initial StopLoss (This could overshoot the risk we are after)
+                */
+                StopLossAt = Math.Round(Price - (Price * (1 - (100 - _risk) / 100)), 2, MidpointRounding.ToZero);
+
+                /*
+                If the StopLoss overshoot we recalculate the StopLoss untill we are
+                under the risk % we have assigned. We decrease the risk with .1% until
+                we our number closest to our requested risk.
+                */
+                while (Math.Abs(Math.Round(100 * ((StopLossAt / Price) - 1), 2)) > Risk)
+                {
+                    StopLossAt = Math.Round(Price - (Price * (1 - (100 - _risk) / 100)), 2, MidpointRounding.ToZero);
+                    _risk -= 0.1;
+                }
+
                 StopLossType = "%";
             }
 

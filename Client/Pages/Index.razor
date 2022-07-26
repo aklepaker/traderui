@@ -232,17 +232,19 @@ TODO: This file should be split into smaller components.
                 </Button>
             </div>
 
-            @if (IsBuyOrder && AdrData.AverageDailyRange > 0 && Math.Round(100 * ((MarketPrice / StopLossAt) - 1), 2) >= Math.Round(AdrData.AverageDailyRange, 2))
-            {
-                <div class="bg-gray-50 px-4 py-2 grid grid-cols-1 gap-4 px-6" >
-                    <Alert Type=@AlertType.Warning >
-                        <p>
-                            You're violating the ADR rule stating that the difference (@Helper.Percent((100 * ((MarketPrice / StopLossAt) - 1)))%) between the ASK price and your Stop-Loss should not be greater than the ADR
-                            (@Helper.Percent(AdrData.AverageDailyRange)%).
-                        </p>
-                        The Stop-Loss should be no lower than @Helper.CurrencyFormat((MarketPrice / (1 + (AdrData.AverageDailyRange) / 100)) + 0.01)
-                    </Alert>
-                </div>
+            @{
+                var stopPercent = Math.Abs(Math.Round(100 * ((StopLossAt / Price) - 1), 2));
+                if (IsBuyOrder && AdrData.AverageDailyRange > 0 && stopPercent >= Math.Round(AdrData.AverageDailyRange, 2))
+                {
+                    <div class="bg-gray-50 px-4 py-2 grid grid-cols-1 gap-4 px-6" >
+                        <Alert Type=@AlertType.Warning >
+                            <p>
+                                You're violating the ADR rule stating that the difference (@Helper.Percent(stopPercent)%) between the ASK price and your Stop-Loss should not be greater than the ADR
+                                (@Helper.Percent(AdrData.AverageDailyRange)%).
+                            </p>
+                        </Alert>
+                    </div>
+                }
             }
 
             @if (AllowPlaceOrder)
