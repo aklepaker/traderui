@@ -1,4 +1,4 @@
-name: Build
+name: Release
 on:
   workflow_dispatch:
   push:
@@ -65,13 +65,17 @@ jobs:
       - name: Publish
         run: |
           dotnet publish .\Server\traderui.Server.csproj -c Release -r win-x64 --self-contained -o .\Publish
+          mkdir .\Artifact | Out-Null
+          Compress-Archive -CompressionLevel Optimal -Path Publish\* -DestinationPath .\Artifact\traderui_${{ steps.version.outputs.version }}.zip
 
-      - name: Upload Binaries
-        uses: actions/upload-artifact@v2
+      - name: Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: traderui_${{ steps.version.outputs.version }}
-          path: .\Publish\**
-          retention-days: 30
+          generate_release_notes: true
+          name: TraderUI v${{ steps.version.outputs.semver }}
+          tag_name: ${{ github.ref }}
+          files: |
+            .\Artifact\traderui_${{ steps.version.outputs.version }}.zip
 
   docker:
     name: Docker image
