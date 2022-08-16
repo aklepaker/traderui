@@ -312,7 +312,7 @@ namespace traderui.Client.Pages
                 StateHasChanged();
             });
 
-            connection.On(nameof(AccountSummaryMessage), (AccountSummaryMessage accountSummaryEvent) =>
+            connection.On(nameof(AccountSummaryMessage), async (AccountSummaryMessage accountSummaryEvent) =>
             {
                 switch (accountSummaryEvent.Tag)
                 {
@@ -326,8 +326,13 @@ namespace traderui.Client.Pages
                 }
 
                 AccountName = accountSummaryEvent.Account;
-                BrokerService.GetAccountSummary(true, CancellationToken.None);
-                BrokerService.GetPnL(AccountName, CancellationToken.None);
+                await BrokerService.GetAccountSummary(true, CancellationToken.None);
+                await BrokerService.GetPnL(AccountName, CancellationToken.None);
+
+                if (await localStorage.ContainKeyAsync("maxLossInPercent"))
+                {
+                    OnMaxLossPercentChange(await localStorage.GetItemAsync<double>("maxLossInPercent"));
+                }
 
                 StateHasChanged();
             });
