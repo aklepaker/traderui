@@ -244,8 +244,7 @@ namespace traderui.Server.IBKR
         {
             Contract contract = new Contract
             {
-                // PrimaryExch = "NASDAQ",
-                PrimaryExch = "ISLAND",
+                PrimaryExch = "NASDAQ",
                 Currency = "USD",
                 Symbol = name,
                 SecType = "STK",
@@ -260,8 +259,7 @@ namespace traderui.Server.IBKR
         {
             Contract contract = new Contract
             {
-                // PrimaryExch = "NASDAQ",
-                PrimaryExch = "ISLAND",
+                PrimaryExch = "NASDAQ",
                 Currency = "USD",
                 Symbol = name,
                 SecType = "STK",
@@ -281,8 +279,7 @@ namespace traderui.Server.IBKR
 
             Contract contract = new Contract
             {
-                // PrimaryExch = "NASDAQ",
-                PrimaryExch = "ISLAND",
+                PrimaryExch = "NASDAQ",
                 Currency = "USD",
                 Symbol = name,
                 SecType = "STK",
@@ -300,8 +297,7 @@ namespace traderui.Server.IBKR
         {
             Contract contract = new Contract
             {
-                // PrimaryExch = "NASDAQ",
-                PrimaryExch = "ISLAND",
+                PrimaryExch = "NASDAQ",
                 Currency = "USD",
                 Symbol = name,
                 SecType = "STK",
