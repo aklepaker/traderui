@@ -343,14 +343,9 @@ namespace traderui.Server.IBKR
 
             if (webOrder.OrderType == OrderType.MKT_CONDITIONAL)
             {
-                order.OrderType = OrderType.MKT.ToString();
-
-                PriceCondition priceCondition = (PriceCondition)OrderCondition.Create(OrderConditionType.Price);
-                priceCondition.ConId = webOrder.ContractDetails.Contract.ConId;
-                priceCondition.Exchange = webOrder.ContractDetails.Contract.Exchange;
-                priceCondition.IsMore = true;
-                priceCondition.Price = Math.Round(webOrder.LmtPrice, 2, MidpointRounding.AwayFromZero);
-                order.Conditions.Add(priceCondition);
+                order.OrderType = "STP";
+                order.Action = "BUY";
+                order.AuxPrice  = Math.Round(webOrder.LmtPrice, 2, MidpointRounding.AwayFromZero);
             }
 
             _client.placeOrder(order.OrderId, webOrder.ContractDetails.Contract, order);
